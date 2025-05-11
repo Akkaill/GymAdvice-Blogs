@@ -1,4 +1,12 @@
-import { Box, Button, Container, Heading, Input, VStack } from "@chakra-ui/react";
+import { useBlogStore } from "@/store/blog";
+import {
+  Box,
+  Button,
+  Container,
+  Heading,
+  Input,
+  VStack,
+} from "@chakra-ui/react";
 import React from "react";
 import { useState } from "react";
 
@@ -9,11 +17,14 @@ export const CreatePage = () => {
     description: "",
     image: "",
   });
-  const handleAddNewBlog = ()=>{
-
-  }
+  const {createBlog} = useBlogStore();
+  const handleAddNewBlog = async () => {
+    const { success, message } = await createBlog(newBlog);
+    console.log(success, "success");
+    console.log(message, "message");
+  };
   return (
-    <Container maxW={"container.sm"} >
+    <Container maxW={"container.sm"}>
       <VStack wordSpacing={8}>
         <Heading as={"h1"} textAlign={"center"} mb={8}>
           Create New Blog
@@ -52,7 +63,9 @@ export const CreatePage = () => {
                 setNewBlog({ ...newBlog, image: e.target.value })
               }
             />
-            <Button onClick={handleAddNewBlog} w={'full'}>ADD BLOG</Button>
+            <Button onClick={handleAddNewBlog} w={"full"}>
+              ADD BLOG
+            </Button>
           </VStack>
         </Box>
       </VStack>
