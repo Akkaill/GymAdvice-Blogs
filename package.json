@@ -1,0 +1,29 @@
+{
+  "name": "GymAdvice-Blogs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon backEnd/server.js"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.10.0",
+  "dependencies": {
+    "@chakra-ui/cli": "^3.17.0",
+    "@chakra-ui/react": "^3.17.0",
+    "@emotion/react": "^11.14.0",
+    "add": "^2.0.6",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "mongoose": "^8.14.1",
+    "react-icon": "^1.0.0",
+    "snippet": "^0.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}
