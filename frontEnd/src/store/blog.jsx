@@ -34,4 +34,9 @@ export const useBlogStore = create((set) => ({
       return { success: false, message: "Something went wrong." };
     }
   },
+  fetchBlogs: async () => {
+    const res = await fetch("/api/blogs");
+    const data = await res.json();
+    set({ blogs: data.data });
+  },
 }));
