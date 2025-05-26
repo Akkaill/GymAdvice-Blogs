@@ -7,6 +7,8 @@ import {
   Input,
   VStack,
 } from "@chakra-ui/react";
+import { toast } from "sonner";
+
 import React from "react";
 import { useState } from "react";
 
@@ -17,11 +19,44 @@ export const CreatePage = () => {
     description: "",
     image: "",
   });
-  const {createBlog} = useBlogStore();
+
+  const { createBlog } = useBlogStore();
+
   const handleAddNewBlog = async () => {
-    const { success, message } = await createBlog(newBlog);
-    console.log(success, "success");
-    console.log(message, "message");
+    // Show a fake loading toast with duration because toast.loading it doesnt work in sonner TT
+    toast("⏳ Creating blog...", {
+      duration: 3500, // 3.5 seconds
+    });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 3500));
+      const { success, message } = await createBlog(newBlog);
+
+      if (success) {
+        toast.success(` ✅ The creation was successful: ${message}`, {
+          duration: 4000,
+        });
+        setNewBlog({
+          title: "",
+          subtitle: "",
+          description: "",
+          image: "",
+        });
+      } else {
+        // Manually trigger error toast (red color)
+        toast.error(` ❌ The creation was unsuccessful: ${message}`, {
+          duration: 4000,
+        });
+      }
+
+      console.log(success, "success");
+      console.log(message, "message");
+    } catch (error) {
+      toast.error(
+        ` 🚫 The creation failed: ${error.message || "Unknown error"}`,
+        { duration: 4000 }
+      );
+      console.error("Create blog error:", error);
+    }
   };
   return (
     <Container maxW={"container.sm"}>

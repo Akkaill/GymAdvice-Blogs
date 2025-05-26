@@ -6,7 +6,7 @@ import { CiHeart, CiSquarePlus, CiSun } from "react-icons/ci";
 
 const Navbar = () => {
   return (
-    <Container maxW={"1140"} px={4}>
+    <Container maxW={"1140"} px={4} pt={2}>
       <Flex
         h={17}
         alignItems={"center"}
