@@ -24,38 +24,42 @@ export const HomePage = () => {
         </Text>
 
         <SimpleGrid
-          column={{
-            base: 3,
+      
+          columns={{
+            base: 1,
             md: 2,
             lg: 3,
-            xl:3
+            xl: 3,
           }}
           wordSpacing={2}
-          w="full"
+          spaceX={5}
+          spaceY={4}
+          w={"full"}
         >
-          {blogs.map((blog)=>(
-            <BlogCard key={blog._id} blog={blog}/>
+          {blogs.map((blog) => (
+            <BlogCard key={blog._id} blog={blog} />
           ))}
         </SimpleGrid>
 
-       
-        <Text
-          fontSize={"xl"}
-          textAlign={"center"}
-          fontWeight={"medium"}
-          color={"grey.700"}
-        >
-          NO BLOG FOUND {""}  
-          <Link to={"/create"}>
-            <Text
-              as="span"
-              color={"blackAlpha.800"}
-              _hover={{ textDecoration: "underline" }}
-            >
-              Create Blog
-            </Text>
-          </Link>
-        </Text>
+        {blogs.length === 0 && (
+          <Text
+            fontSize={"xl"}
+            textAlign={"center"}
+            fontWeight={"medium"}
+            color={"grey.700"}
+          >
+            NO BLOG FOUND {""}
+            <Link to={"/create"}>
+              <Text
+                as="span"
+                color={"blackAlpha.800"}
+                _hover={{ textDecoration: "underline" }}
+              >
+                Create Blog
+              </Text>
+            </Link>
+          </Text>
+        )}
       </VStack>
     </Container>
   );
