@@ -30,9 +30,6 @@ const Navbar = () => {
           <Link to={"/create"}>
             <CiSquarePlus />
           </Link>
-          <Link>
-            <CiSun />
-          </Link>
           <Link to={"/favorite"}>
             <CiHeart />
           </Link>
