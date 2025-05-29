@@ -1,9 +1,62 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
-export const useBlogStore = create((set) => ({
+export const useBlogStore = create((set, get) => ({
   blogs: [],
-  setBlog: (blogs) => set({ blogs }),
+  loading: false,
+  hasMore: true,
+  nextCursor: null,
+  search: '',
+  sortBy: 'createdAt',
+  order: 'desc',
 
+  setSearch: (newSearch) => {
+    set({
+      search: newSearch,
+      blogs: [],
+      nextCursor: null,
+      hasMore: true,
+    });
+  },
+
+  setSort: (sortBy, order = 'desc') => {
+    set({
+      sortBy,
+      order,
+      blogs: [],
+      nextCursor: null,
+      hasMore: true,
+    });
+  },
+
+  fetchPaginatedBlogs: async (cursor = null, limit = 6) => {
+    const { search, sortBy, order } = get();
+
+    set({ loading: true });
+
+    try {
+      const query = new URLSearchParams({
+        limit: String(limit),
+        search,
+        sortBy,
+        order,
+      });
+      if (cursor) query.append('cursor', cursor);
+
+      const res = await fetch(`/api/blogs?${query.toString()}`);
+      const result = await res.json();
+
+      set((state) => ({
+        blogs: cursor ? [...state.blogs, ...result.data] : result.data,
+        loading: false,
+        hasMore: result.hasMore,
+        nextCursor: result.nextCursor,
+      }));
+    } catch (error) {
+      console.error('Error fetching blogs:', error);
+      set({ loading: false });
+      throw error;
+    }
+  },
   createBlog: async (newBlog) => {
     if (
       !newBlog.title ||
@@ -38,5 +91,16 @@ export const useBlogStore = create((set) => ({
     const res = await fetch("/api/blogs");
     const data = await res.json();
     set({ blogs: data.data });
+  },
+  deleteBlog: async (id) => {
+    const res = await fetch(`/api/blogs/${id}`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (!data.success) return { success: false, message: data.message };
+
+    //update ui immediatly without needing a refresh
+    set((state) => ({ blogs: state.blogs.filter((blog) => blog._id !== id) }));
+    return { success: true, message: data.message };
   },
 }));
