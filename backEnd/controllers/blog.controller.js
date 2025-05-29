@@ -6,9 +6,12 @@ export const getBlogs = async (req, res) => {
     const limit = parseInt(req.query.limit) || 6;
     const cursor = req.query.cursor || null; // cursor = last _id จากหน้าก่อน
     const search = req.query.search || "";
-    const sortBy = req.query.sortBy || "createdAt";
-    const order = req.query.order === "asc" ? 1 : -1;
+    const allowedSortFields = ["createdAt", "title", "updatedAt"];
+    const sortBy = allowedSortFields.includes(req.query.sortBy)
+      ? req.query.sortBy
+      : "createdAt";
 
+    const order = req.query.order === "asc" ? 1 : -1;
     // filter search title
     const filter = {
       title: { $regex: search, $options: "i" },
@@ -45,8 +48,9 @@ export const getBlogs = async (req, res) => {
       hasMore,
     });
   } catch (error) {
+    console.error("Error in getBlogs:", error);  
     res.status(500).json({ success: false, message: "Server error" });
-  }
+}
 };
 
 
