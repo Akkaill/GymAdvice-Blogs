@@ -12,7 +12,7 @@ app.use("/api/blogs", blogRoutes)
 
 
 
-app.listen(PORT, () => {
+app.listen(PORT,'::', () => {
     connectDB();
     console.log("Sever started at http://localhost:" + PORT);
 });

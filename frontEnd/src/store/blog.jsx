@@ -1,14 +1,14 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 export const useBlogStore = create((set, get) => ({
   blogs: [],
   loading: false,
   hasMore: true,
   nextCursor: null,
-  search: '',
-  sortBy: 'createdAt',
-  order: 'desc',
-
+  search: "",
+  sortBy: "createdAt",
+  order: "desc",
+  resetBlogs: () => set({ blogs: [], nextCursor: null, hasMore: true }),
   setSearch: (newSearch) => {
     set({
       search: newSearch,
@@ -18,7 +18,8 @@ export const useBlogStore = create((set, get) => ({
     });
   },
 
-  setSort: (sortBy, order = 'desc') => {
+  setSort: (sortBy, order = "desc") => {
+    console.log("💾 setSort called with:", sortBy, order);
     set({
       sortBy,
       order,
@@ -30,7 +31,13 @@ export const useBlogStore = create((set, get) => ({
 
   fetchPaginatedBlogs: async (cursor = null, limit = 6) => {
     const { search, sortBy, order } = get();
-
+    console.log(
+      "FETCHING blogs with sortBy:",
+      get().sortBy,
+      "order:",
+      get().order
+    );
+    console.log("🔥 FETCHING blogs with:", { search, sortBy, order, cursor });
     set({ loading: true });
 
     try {
@@ -40,7 +47,7 @@ export const useBlogStore = create((set, get) => ({
         sortBy,
         order,
       });
-      if (cursor) query.append('cursor', cursor);
+      if (cursor) query.append("cursor", cursor);
 
       const res = await fetch(`/api/blogs?${query.toString()}`);
       const result = await res.json();
@@ -52,7 +59,7 @@ export const useBlogStore = create((set, get) => ({
         nextCursor: result.nextCursor,
       }));
     } catch (error) {
-      console.error('Error fetching blogs:', error);
+      console.error("Error fetching blogs:", error);
       set({ loading: false });
       throw error;
     }
