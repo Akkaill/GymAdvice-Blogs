@@ -1,58 +1,73 @@
 import Blog from "../models/blogs.model.js";
 import mongoose from "mongoose";
 
+
 export const getBlogs = async (req, res) => {
   try {
-    
+    // ค่าที่ใช้ในการควบคุมการ paginate / filter / sort
     const limit = parseInt(req.query.limit) || 6;
-    const cursor = req.query.cursor || null; // cursor = last _id จากหน้าก่อน
     const search = req.query.search || "";
-    const allowedSortFields = ["createdAt", "title", "updatedAt"];
+
+    // กำหนด field ที่สามารถ sort ได้เท่านั้น เพื่อความปลอดภัย
+    const allowedSortFields = ["createdAt", "updatedAt", "title"];
     const sortBy = allowedSortFields.includes(req.query.sortBy)
       ? req.query.sortBy
       : "createdAt";
 
+    // ถ้าไม่ส่งมา หรือผิด format → default เป็น desc (-1)
     const order = req.query.order === "asc" ? 1 : -1;
-    // filter search title
+
+    // ตัวระบุตำแหน่งของหน้า (ใช้สำหรับ paginate ถัดไป)
+    const cursor = req.query.cursor;
+
+    // เริ่มต้น filter จาก search
     const filter = {
-      title: { $regex: search, $options: "i" },
+      title: { $regex: search, $options: "i" }, // insensitive regex search
     };
 
-    // ถ้ามี cursor ให้เพิ่ม filter สำหรับ pagination แบบ cursor
+    //ถ้ามี cursor เพิ่ม filter ตามทิศทางของ order
     if (cursor) {
-      // ต้องแปลง cursor เป็น ObjectId (Mongo)
-      const ObjectId = require("mongoose").Types.ObjectId;
+      if (!mongoose.Types.ObjectId.isValid(cursor)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid cursor format",
+        });
+      }
 
-      // ใช้ sortBy + order กำหนดเงื่อนไข
-      // ถ้า order desc: ต้องหา _id น้อยกว่า cursor
-      // สมมติ sortBy เป็น createdAt หรืออื่น ๆ สมมติเราจัดเรียงโดย _id (เรียงตามเวลาสร้าง)
+      const cursorObjId = new mongoose.Types.ObjectId(cursor);
 
-      filter._id =
-        order === 1 ? { $gt: ObjectId(cursor) } : { $lt: ObjectId(cursor) };
+      //เลือกเงื่อนไข filter ให้สอดคล้องกับ order
+      filter._id = order === 1 ? { $gt: cursorObjId } : { $lt: cursorObjId };
     }
 
-    // ดึงข้อมูลโดย sort และ limit
-    const blogs = await Blog.find(filter)
+    // ดึงข้อมูลเกินมา 1 ชิ้น เพื่อเช็คว่ายังมีต่อหรือไม่
+    const results = await Blog.find(filter)
       .sort({ [sortBy]: order })
-      .limit(limit + 1); // +1 เพื่อเช็คว่ามีหน้าต่อไหม
+      .limit(limit + 1);
+    // ตรวจสอบว่าเรามี "หน้าใหม่" หรือไม่
+    const hasMore = results.length > limit;
 
-    const hasMore = blogs.length > limit;
-    if (hasMore) blogs.pop(); // ลบ item ตัวที่ 7 ออก (เก็บไว้แค่ 6)
+    // ตัดทิ้งตัวที่เกิน limit (ตัวที่เอาไว้ดูเฉย ๆ ว่ามีต่อหรือเปล่า)
+    if (hasMore) results.pop();
 
-    const nextCursor = hasMore ? blogs[blogs.length - 1]._id : null;
+    // เอา _id ตัวสุดท้าย (เรียงตามที่เรากำหนด) มาใช้เป็น nextCursor
+    const nextCursor = hasMore ? results[results.length - 1]._id.toString() : null;
 
+    // ส่งกลับ frontend
     res.status(200).json({
       success: true,
-      data: blogs,
+      data: results,
       nextCursor,
       hasMore,
     });
   } catch (error) {
     console.error("Error in getBlogs:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };
-
 export const getBlogById = async (req, res) => {
   const { id } = req.params;
   try {

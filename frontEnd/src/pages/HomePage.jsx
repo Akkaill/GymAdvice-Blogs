@@ -6,7 +6,7 @@ import {
   SimpleGrid,
   Spinner,
   Box,
-  Input
+  Input,
 } from "@chakra-ui/react";
 
 import {
@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { useBlogStore } from "@/store/blog";
 import BlogCard from "@/components/BlogCard";
@@ -42,7 +41,9 @@ export const HomePage = () => {
   const [sortValue, setSortValue] = useState(
     sortBy && order ? `${sortBy}|${order}` : "createdAt|desc"
   );
-  const get = useBlogStore.getState; // <-- get สำหรับอ่านค่าปัจจุบันของ store
+  const uniqueBlogs = Array.from(
+    new Map(blogs.map((blog) => [blog._id, blog])).values()
+  );
   const debouncedFetch = useCallback(
     debounce((delay) => {
       setSearch(delay);
@@ -56,10 +57,10 @@ export const HomePage = () => {
   });
 
   useEffect(() => {
-    console.log("sortBy:", sortBy, "order:", order);
-    console.log("BlogCard:", BlogCard); // log ตรวจว่า BlogCard ถูก import ไหม
-    console.log("blogs:", blogs); // log ตรวจว่าข้อมูล blogs มาไหม
-    console.log("Current sortValue:", sortValue);
+    if (nextCursor) {
+      console.log("📌 Sending cursor:", nextCursor);
+      query.append("cursor", nextCursor);
+    }
     console.log("🧠 sortBy:", sortBy, "order:", order);
     console.log("📦 blogs:", blogs);
   }, []);
@@ -81,17 +82,22 @@ export const HomePage = () => {
     setSearchTerm(newSearch);
     debouncedFetch(newSearch);
   };
-  const handleSortChange = (selectedValue) => {
+  const handleSortChange = async (selectedValue) => {
     console.log("Selected (direct):", selectedValue);
     const [newSort, newOrder] = selectedValue.split("|");
-    console.log("🔄 Fetch after sort set:", get().sortBy, get().order);
+
     setSortValue(selectedValue);
     resetBlogs(); // 1. reset
-    setSort(newSort, newOrder); // 2. update state
 
-    setTimeout(() => {
-      fetchPaginatedBlogs(null); // 3. fetch หลัง state ถูก update
-    }, 50);
+    // บังคับให้ใช้ callback หรือทำให้แน่ใจว่า state update แล้วจริงๆ
+    await new Promise((resolve) => {
+      setTimeout(() => {
+        setSort(newSort, newOrder);
+        resolve();
+      }, 0);
+    });
+
+    fetchPaginatedBlogs(null);
   };
 
   return (
@@ -106,26 +112,26 @@ export const HomePage = () => {
         >
           Recently Blogs
         </Text>
-        <Box display={"flex"} w={"full"} gap={3} rounded={"l"}  zIndex={999} position="relative">
+        <Box
+          display={"flex"}
+          w={"full"}
+          gap={3}
+          rounded={"l"}
+          zIndex={999}
+          position="relative"
+        >
           <Input
             placeholder="Search blogs..."
             value={searchTerm}
             onChange={handleSearchChange}
             mb={4}
             w="full"
-            
           />
-          <Select
-            onValueChange={handleSortChange}
-            mb={4}
-            
-            value={sortValue}
-            
-          >
-            <SelectTrigger className=''>
+          <Select onValueChange={handleSortChange} mb={4} value={sortValue}>
+            <SelectTrigger className="w-42 flex justify-center">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
-            <SelectContent className="z-[999]" forceMount >
+            <SelectContent className="z-[999] bg-gray-100">
               <SelectItem value="createdAt|desc">Newest First</SelectItem>
               <SelectItem value="createdAt|asc">Oldest First</SelectItem>
               <SelectItem value="title|asc">Title A-Z</SelectItem>
@@ -143,9 +149,9 @@ export const HomePage = () => {
           }}
           gap={5}
           w={"full"}
-          zIndex={'100'}
+          zIndex={"100"}
         >
-          {Array.isArray(blogs) && blogs.length > 0 ? (
+          {/* {Array.isArray(blogs) && blogs.length > 0 ? (
             <>
               {console.log("🧾 Rendering blogs:", blogs)}
               {blogs.map((blog) => (
@@ -154,7 +160,10 @@ export const HomePage = () => {
             </>
           ) : (
             <Text>No blogs found.</Text>
-          )}
+          )} */}
+          {uniqueBlogs.map((blog) => (
+            <BlogCard key={blog._id} blog={blog} />
+          ))}
         </SimpleGrid>
 
         {blogs.length === 0 && !loading && (

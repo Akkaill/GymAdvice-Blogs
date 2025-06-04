@@ -50,13 +50,24 @@ export const useBlogStore = create((set, get) => ({
       if (cursor) query.append("cursor", cursor);
 
       const res = await fetch(`/api/blogs?${query.toString()}`);
+
+      // ✅ เช็กว่า API ตอบ 2xx หรือไม่
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API error: ${res.status} - ${errorText}`);
+      }
       const result = await res.json();
+      //✅ ป้องกัน result.data ไม่เป็น array
+      if (!Array.isArray(result.data)) {
+        console.error("❌ Invalid data format from API:", result.data);
+        throw new Error("Invalid data format from API: data is not an array");
+      }
 
       set((state) => ({
         blogs: cursor ? [...state.blogs, ...result.data] : result.data,
         loading: false,
-        hasMore: result.hasMore,
-        nextCursor: result.nextCursor,
+        hasMore: result.hasMore ?? false,
+        nextCursor: result.nextCursor ?? null,
       }));
     } catch (error) {
       console.error("Error fetching blogs:", error);
@@ -99,6 +110,18 @@ export const useBlogStore = create((set, get) => ({
     const data = await res.json();
     set({ blogs: data.data });
   },
+  fetchBlogById: async (id) => {
+    try {
+      const res = await fetch(`/api/blogs/${id}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    } catch (error) {
+      console.error("Failed to fetch blog by ID:", error);
+      return null;
+    }
+  },
+
   deleteBlog: async (id) => {
     const res = await fetch(`/api/blogs/${id}`, {
       method: "DELETE",
