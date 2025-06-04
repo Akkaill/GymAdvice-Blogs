@@ -50,7 +50,7 @@ export default function BlogCard ({ blog }) {
               <FaRegHeart />
             </Box>
           </Link>
-          <Link to={"blogs"}>
+          <Link to={`/blogs/${blog._id}`}>
             <Box
               transition={"all 0.3s"}
               _hover={{ transform: "translateX(-5px)", shadow: "xl" }}

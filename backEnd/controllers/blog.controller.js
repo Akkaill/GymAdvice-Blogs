@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 
 export const getBlogs = async (req, res) => {
   try {
+    
     const limit = parseInt(req.query.limit) || 6;
     const cursor = req.query.cursor || null; // cursor = last _id จากหน้าก่อน
     const search = req.query.search || "";
@@ -26,9 +27,8 @@ export const getBlogs = async (req, res) => {
       // ถ้า order desc: ต้องหา _id น้อยกว่า cursor
       // สมมติ sortBy เป็น createdAt หรืออื่น ๆ สมมติเราจัดเรียงโดย _id (เรียงตามเวลาสร้าง)
 
-      filter._id = order === 1 
-        ? { $gt: ObjectId(cursor) } 
-        : { $lt: ObjectId(cursor) };
+      filter._id =
+        order === 1 ? { $gt: ObjectId(cursor) } : { $lt: ObjectId(cursor) };
     }
 
     // ดึงข้อมูลโดย sort และ limit
@@ -48,18 +48,23 @@ export const getBlogs = async (req, res) => {
       hasMore,
     });
   } catch (error) {
-    console.error("Error in getBlogs:", error);  
+    console.error("Error in getBlogs:", error);
     res.status(500).json({ success: false, message: "Server error" });
-}
+  }
 };
-
 
 export const getBlogById = async (req, res) => {
   const { id } = req.params;
   try {
-    const Blog = await Blog.findById(id);
-    res.status(200).json({ success: true, data: Blog });
+    const blog = await Blog.findById(id);
+    if (!blog) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Blog not found" });
+    }
+    res.status(200).json({ success: true, data: blog });
   } catch (error) {
+    console.error("Error in getBlogById:", error);
     res.status(500).json({ success: false, message: "Failure to FetchById" });
   }
 };
