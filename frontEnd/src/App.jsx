@@ -8,12 +8,16 @@ import { BlogDetail } from "./pages/BlogDetail";
 import { Toaster } from "sonner";
 import Footer from "./components/Footer";
 import { AllBlogs } from "@/pages/Blogs";
-
+import { HeroSection } from "@/components/HeroSection";
+import { Section } from "@/components/Section";
 function App() {
   return (
     <Box minH={"100vh"}>
       <NavBar />
       <Toaster richColors position="bottom-right" />
+      <Section>
+        <HeroSection />
+      </Section>
       <Routes>
         <Route path="/" element={<HomePage />}></Route>
         <Route path="/create" element={<CreatePage />}></Route>

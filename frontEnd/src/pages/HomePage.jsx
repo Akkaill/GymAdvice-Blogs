@@ -4,7 +4,6 @@ import {
   Container,
   Text,
   SimpleGrid,
-  Spinner,
   Box,
   Input,
 } from "@chakra-ui/react";
@@ -19,17 +18,18 @@ import {
 import { Link } from "react-router-dom";
 import { useBlogStore } from "@/store/blog";
 import BlogCard from "@/components/BlogCard";
-import { useInView } from "react-intersection-observer";
+
 import debounce from "lodash.debounce";
 import { useCallback } from "react";
+import { Section } from "@/components/Section";
 
 export const HomePage = () => {
   const {
     fetchPaginatedBlogs,
     blogs,
-    nextCursor,
+
     loading,
-    hasMore,
+
     setSearch,
     setSort,
     search,
@@ -51,25 +51,15 @@ export const HomePage = () => {
     }, 500),
     []
   );
-  const { ref, inView } = useInView({
-    threshold: 0.1,
-    triggerOnce: false,
-  });
 
   useEffect(() => {
-    if (nextCursor) {
-      console.log("📌 Sending cursor:", nextCursor);
-      query.append("cursor", nextCursor);
-    }
     console.log("🧠 sortBy:", sortBy, "order:", order);
     console.log("📦 blogs:", blogs);
   }, []);
 
   useEffect(() => {
-    if (inView && hasMore && !loading) {
-      fetchPaginatedBlogs(nextCursor);
-    }
-  }, [inView, hasMore, loading, nextCursor]);
+    fetchPaginatedBlogs(null, 6);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -101,14 +91,17 @@ export const HomePage = () => {
   };
 
   return (
-    <Container maxW="container.xl" py={12}>
-      <VStack wordSpacing={2}>
+    <Container maxW="container.xl" py={12}  >
+   
+      <Section>
+      <VStack wordSpacing={2} id="next-section">
         <Text
           fontSize={"4xl"}
           fontWeight={"bold"}
           bgColor={"black"}
           bgClip={"text"}
           textAlign={"center"}
+          paddingTop={14}
         >
           Recently Blogs
         </Text>
@@ -151,16 +144,6 @@ export const HomePage = () => {
           w={"full"}
           zIndex={"100"}
         >
-          {/* {Array.isArray(blogs) && blogs.length > 0 ? (
-            <>
-              {console.log("🧾 Rendering blogs:", blogs)}
-              {blogs.map((blog) => (
-                <BlogCard key={blog._id} blog={blog} />
-              ))}
-            </>
-          ) : (
-            <Text>No blogs found.</Text>
-          )} */}
           {uniqueBlogs.map((blog) => (
             <BlogCard key={blog._id} blog={blog} />
           ))}
@@ -185,19 +168,8 @@ export const HomePage = () => {
             </Link>
           </Text>
         )}
-
-        {loading && (
-          <Spinner size="lg" thickness="4px" speed="0.65s" color="gray.600" />
-        )}
-
-        <div ref={ref} style={{ height: "1px" }} />
-
-        {!hasMore && blogs.length > 0 && (
-          <Text fontSize="sm" color="gray.400">
-            You've reached the end.
-          </Text>
-        )}
       </VStack>
+      </Section>
     </Container>
   );
 };
