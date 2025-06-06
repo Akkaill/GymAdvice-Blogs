@@ -1,7 +1,6 @@
 import { Box, HStack, Heading, Image, Text } from "@chakra-ui/react";
 import React from "react";
 import { FaArrowRightLong } from "react-icons/fa6";
-import { FaRegHeart } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 export default function BlogCard({ blog }) {

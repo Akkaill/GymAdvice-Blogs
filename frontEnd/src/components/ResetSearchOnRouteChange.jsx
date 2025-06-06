@@ -21,7 +21,7 @@ const ResetSearchOnRouteChange = () => {
     console.log("🔁 Reset triggered on path change:", currentPath);
     setSearch("");
     resetBlogs();
-     fetchPaginatedBlogs(null); // ⬅️ Do fresh fetch here only
+     fetchPaginatedBlogs(null); //  Do fresh fetch here only
   }, [location.pathname]);
 
   return null;

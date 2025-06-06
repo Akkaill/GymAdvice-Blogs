@@ -51,13 +51,13 @@ export const useBlogStore = create((set, get) => ({
 
       const res = await fetch(`/api/blogs?${query.toString()}`);
 
-      // ✅ เช็กว่า API ตอบ 2xx หรือไม่
+      // เช็กว่า API ตอบ 2xx หรือไม่
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`API error: ${res.status} - ${errorText}`);
       }
       const result = await res.json();
-      //✅ ป้องกัน result.data ไม่เป็น array
+      // ป้องกัน result.data ไม่เป็น array
       if (!Array.isArray(result.data)) {
         console.error("❌ Invalid data format from API:", result.data);
         throw new Error("Invalid data format from API: data is not an array");

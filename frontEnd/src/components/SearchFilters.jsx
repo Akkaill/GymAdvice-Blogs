@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { useBlogStore } from "@/store/blog";
 import debounce from "lodash.debounce";
-import { useLocation } from "react-router-dom";
+
 
 export const SearchFilters = () => {
   const {
@@ -58,7 +58,7 @@ export const SearchFilters = () => {
     console.log("Selected (direct):", selectedValue);
     const [newSort, newOrder] = selectedValue.split("|");
     setSortValue(selectedValue);
-    resetBlogs(); // 1. reset
+    resetBlogs(); // reset
     // บังคับให้ใช้ callback หรือทำให้แน่ใจว่า state update แล้วจริงๆ
     await new Promise((resolve) => {
       setTimeout(() => {
