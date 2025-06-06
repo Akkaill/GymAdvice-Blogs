@@ -47,9 +47,10 @@ const Navbar = () => {
           <IconButton
             display={{ base: "flex", md: "none" }}
             onClick={onToggle}
-            _icon={isOpen ? <HiX  size={24} /> : <HiMenu size={24}/>}
+            icon={isOpen ? <HiX  size={24} color="black"/> : <HiMenu size={24} color="black"/>}
             variant="ghost"
             aria-label="Toggle Menu"
+            
             
             
           />
@@ -61,7 +62,7 @@ const Navbar = () => {
         {isOpen && (
           <VStack
             spacing={4}
-            align="start"
+            align="center"
             mt={4}
             display={{ base: "flex", md: "none" }}
             pb={4}

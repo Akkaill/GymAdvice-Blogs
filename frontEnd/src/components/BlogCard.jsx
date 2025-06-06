@@ -44,7 +44,7 @@ export default function BlogCard({ blog }) {
               alignItems={"center"}
               rounded={"lg"}
               p={1}
-              gapX={1}
+              gap={1}
             >
               <Text>Learn more</Text>
               <Text>

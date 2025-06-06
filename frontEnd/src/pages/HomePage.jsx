@@ -1,174 +1,79 @@
-import React, { useEffect, useState } from "react";
-import {
-  VStack,
-  Container,
-  Text,
-  SimpleGrid,
-  Box,
-  Input,
-} from "@chakra-ui/react";
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import React, { useEffect } from "react";
+import { VStack, Container, Text, SimpleGrid } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
 import { useBlogStore } from "@/store/blog";
 import BlogCard from "@/components/BlogCard";
-
-import debounce from "lodash.debounce";
-import { useCallback } from "react";
+import { HeroSection } from "@/components/HeroSection";
 import { Section } from "@/components/Section";
+import { SearchFilters } from "@/components/SearchFilters";
 
 export const HomePage = () => {
-  const {
-    fetchPaginatedBlogs,
-    blogs,
+  const { fetchPaginatedBlogs, blogs, loading } = useBlogStore();
 
-    loading,
-
-    setSearch,
-    setSort,
-    search,
-    sortBy,
-    order,
-    resetBlogs,
-  } = useBlogStore();
-  const [searchTerm, setSearchTerm] = useState(search);
-  const [sortValue, setSortValue] = useState(
-    sortBy && order ? `${sortBy}|${order}` : "createdAt|desc"
-  );
   const uniqueBlogs = Array.from(
     new Map(blogs.map((blog) => [blog._id, blog])).values()
   );
-  const debouncedFetch = useCallback(
-    debounce((delay) => {
-      setSearch(delay);
-      fetchPaginatedBlogs(null); // reset + fetch ใหม่
-    }, 500),
-    []
-  );
-
-  useEffect(() => {
-    console.log("🧠 sortBy:", sortBy, "order:", order);
-    console.log("📦 blogs:", blogs);
-  }, []);
 
   useEffect(() => {
     fetchPaginatedBlogs(null, 6);
+    console.log("Rendering App");
   }, []);
 
-  useEffect(() => {
-    return () => {
-      debouncedFetch.cancel();
-    };
-  }, [debouncedFetch]);
-
-  const handleSearchChange = (e) => {
-    const newSearch = e.target.value;
-    setSearchTerm(newSearch);
-    debouncedFetch(newSearch);
-  };
-  const handleSortChange = async (selectedValue) => {
-    console.log("Selected (direct):", selectedValue);
-    const [newSort, newOrder] = selectedValue.split("|");
-
-    setSortValue(selectedValue);
-    resetBlogs(); // 1. reset
-
-    // บังคับให้ใช้ callback หรือทำให้แน่ใจว่า state update แล้วจริงๆ
-    await new Promise((resolve) => {
-      setTimeout(() => {
-        setSort(newSort, newOrder);
-        resolve();
-      }, 0);
-    });
-
-    fetchPaginatedBlogs(null);
-  };
-
   return (
-    <Container maxW="container.xl" py={12}  >
-   
+    <Container maxW="container.xl" py={12}>
       <Section>
-      <VStack wordSpacing={2} id="next-section">
-        <Text
-          fontSize={"4xl"}
-          fontWeight={"bold"}
-          bgColor={"black"}
-          bgClip={"text"}
-          textAlign={"center"}
-          paddingTop={14}
-        >
-          Recently Blogs
-        </Text>
-        <Box
-          display={"flex"}
-          w={"full"}
-          gap={3}
-          rounded={"l"}
-          zIndex={999}
-          position="relative"
-        >
-          <Input
-            placeholder="Search blogs..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            mb={4}
-            w="full"
-          />
-          <Select onValueChange={handleSortChange} mb={4} value={sortValue}>
-            <SelectTrigger className="w-42 flex justify-center">
-              <SelectValue placeholder="Filter" />
-            </SelectTrigger>
-            <SelectContent className="z-[999] bg-gray-100">
-              <SelectItem value="createdAt|desc">Newest First</SelectItem>
-              <SelectItem value="createdAt|asc">Oldest First</SelectItem>
-              <SelectItem value="title|asc">Title A-Z</SelectItem>
-              <SelectItem value="title|desc">Title Z-A</SelectItem>
-            </SelectContent>
-          </Select>
-        </Box>
-
-        <SimpleGrid
-          columns={{
-            base: 1,
-            md: 2,
-            lg: 3,
-            xl: 3,
-          }}
-          gap={5}
-          w={"full"}
-          zIndex={"100"}
-        >
-          {uniqueBlogs.map((blog) => (
-            <BlogCard key={blog._id} blog={blog} />
-          ))}
-        </SimpleGrid>
-
-        {blogs.length === 0 && !loading && (
+        <HeroSection />
+      </Section>
+      <Section>
+        <VStack wordSpacing={2} id="next-section">
           <Text
-            fontSize="xl"
-            textAlign="center"
-            fontWeight="medium"
-            color="gray.600"
+            fontSize={"4xl"}
+            fontWeight={"bold"}
+            bgColor={"black"}
+            bgClip={"text"}
+            textAlign={"center"}
+            paddingTop={14}
           >
-            NO BLOG FOUND{" "}
-            <Link to="/create">
-              <Text
-                as="span"
-                color="blackAlpha.800"
-                _hover={{ textDecoration: "underline" }}
-              >
-                Create Blog
-              </Text>
-            </Link>
+            Recently Blogs
           </Text>
-        )}
-      </VStack>
+          <SearchFilters />
+
+          <SimpleGrid
+            columns={{
+              base: 1,
+              md: 2,
+              lg: 3,
+              xl: 3,
+            }}
+            gap={5}
+            w={"full"}
+            zIndex={"100"}
+          >
+            {uniqueBlogs.map((blog) => (
+              <BlogCard key={blog._id} blog={blog} />
+            ))}
+          </SimpleGrid>
+
+          {blogs.length === 0 && !loading && (
+            <Text
+              fontSize="xl"
+              textAlign="center"
+              fontWeight="medium"
+              color="gray.600"
+            >
+              NO BLOG FOUND{" "}
+              <Link to="/create">
+                <Text
+                  as="span"
+                  color="blackAlpha.800"
+                  _hover={{ textDecoration: "underline" }}
+                >
+                  Create Blog
+                </Text>
+              </Link>
+            </Text>
+          )}
+        </VStack>
       </Section>
     </Container>
   );

@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 
-import { ArrowRight, Sun, Moon, ChevronDown } from "lucide-react";
+import { ArrowRight,  ChevronDown } from "lucide-react";
 import { TypeAnimation } from "react-type-animation";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -35,12 +35,12 @@ export const HeroSection = () => {
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight"
+          className="text-4xl sm:text-5xl md:text-7xl xl:text-9xl font-extrabold mb-4 leading-tight"
         >
           Welcome to <span className="text-green-400">Gym Advice</span>
         </motion.h1>
 
-        <div className="backdrop-blur-md bg-black/30 p-6 rounded-lg max-w-xl mx-auto">
+        <div className=" p-6 rounded-lg max-w-xl mx-auto">
           <TypeAnimation
             sequence={[
               "Here, you'll find the most valuable and effective fitness advice to help you reach your goals. 💪",
@@ -55,7 +55,7 @@ export const HeroSection = () => {
             wrapper="p"
             speed={50}
             repeat={Infinity}
-            className="text-lg sm:text-xl md:text-2xl text-white text-center leading-relaxed"
+            className="text-lg sm:text-sm md:text-sm text-white text-center leading-relaxed"
           />
         </div>
 
