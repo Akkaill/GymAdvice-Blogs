@@ -28,20 +28,20 @@ export const SearchFilters = () => {
     sortBy && order ? `${sortBy}|${order}` : "createdAt|desc"
   );
 
+
   const debouncedFetch = useCallback(
-    debounce((delay) => {
-      setSearch(delay);
-      if (delay.trim() !== "") {
-        fetchPaginatedBlogs(null); // reset + fetch ใหม่
-      }
-    }, 500),
-    []
-  );
+  debounce((delay) => {
+    setSearch(delay);
+    resetBlogs(); // เคลียร์ state ก่อนดึงข้อมูลใหม่
+    fetchPaginatedBlogs(null); // ดึงใหม่ทุกครั้ง
+  }, 500),
+  []
+)
   useEffect(() => {
-    setSearchTerm(search); // reflect store reset to input
+    setSearchTerm(search); // ถ้า state ถูก reset ข้างนอก เช่น route change
     console.log("🧠 sortBy:", sortBy, "order:", order);
     console.log("📦 blogs:", blogs);
-  }, []);
+  }, [search]);
 
   useEffect(() => {
     return () => {
