@@ -51,7 +51,9 @@ export const getBlogs = async (req, res) => {
     if (hasMore) results.pop();
 
     // เอา _id ตัวสุดท้าย (เรียงตามที่เรากำหนด) มาใช้เป็น nextCursor
-    const nextCursor = hasMore ? results[results.length - 1]._id.toString() : null;
+    const nextCursor = hasMore
+      ? results[results.length - 1]._id.toString()
+      : null;
 
     // ส่งกลับ frontend
     res.status(200).json({
@@ -68,6 +70,7 @@ export const getBlogs = async (req, res) => {
     });
   }
 };
+
 export const getBlogById = async (req, res) => {
   const { id } = req.params;
   try {
@@ -85,20 +88,39 @@ export const getBlogById = async (req, res) => {
 };
 
 export const createBlog = async (req, res) => {
-  const blog = req.body;
-  if (!blog.title || !blog.subtitle || !blog.description || !blog.image) {
+  const { title, subtitle, description, image } = req.body;
+
+  // ตรวจว่า req.user มีจริง (ป้องกันกรณีไม่ผ่าน protect middleware)
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  // ตรวจว่ากรอกครบ
+  if (!title || !subtitle || !description || !image) {
     return res
       .status(400)
       .json({ success: false, message: "Please provide all fields" });
   }
 
-  const newBlog = new Blog(blog);
+  const newBlog = new Blog({
+    title,
+    subtitle,
+    description,
+    image,
+    user: req.user._id, // ผูกกับเจ้าของบล็อก
+    authorName: req.user.username, // ใส่ชื่อผู้ใช้เพื่อโชว์ได้เลย
+  });
+
   try {
     await newBlog.save();
-    res.status(201).json({ success: true, data: newBlog });
+    res
+      .status(201)
+      .json({ success: true, message: "Blog created", data: newBlog });
   } catch (error) {
     console.error("Error in Create blog", error.message);
-    res.status(500).json({ seccess: false, message: "Server error to create" });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error: Failed to create blog" });
   }
 };
 
