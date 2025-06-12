@@ -46,7 +46,7 @@ export const login = async (req, res) => {
   const settings = await SecuritySettings.findOne();
   const maxAttempts = settings?.maxLoginAttempts || 5;
 
-  // 1️⃣ ตรวจว่า locked ไว้ไหม
+  // 1. ตรวจว่า locked ไว้ไหม
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     return res.status(403).json({
       success: false,
@@ -54,7 +54,7 @@ export const login = async (req, res) => {
     });
   }
 
-  // 2️⃣ ถ้า otpRequired แล้ว ยังไม่ส่ง otp
+  // 2.ถ้า otpRequired แล้ว ยังไม่ส่ง otp
   if (user.tempContactInfo.otpRequired) {
     if (!otp) {
       // ยังไม่ได้ยืนยัน
@@ -78,7 +78,7 @@ export const login = async (req, res) => {
     await user.save();
   }
 
-  // 3️⃣ ตรวจรหัสผ่าน
+  // 3.ตรวจรหัสผ่าน
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
@@ -118,7 +118,7 @@ export const login = async (req, res) => {
     return res.status(401).json({ success: false, message: "Invalid credentials" });
   }
 
-  // 4️⃣ ถ้ารหัสผ่านถูก
+  // 4️. ถ้ารหัสผ่านถูก
   user.failedLoginAttempts = 0;
   user.lockedUntil = null;
   user.tempContactInfo = {};
