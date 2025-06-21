@@ -13,7 +13,7 @@ export const useAuthStore = create((set, get) => ({
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
 
-  // ✅ Register
+  // Register
   register: async (username, password) => {
     set({ loading: true, error: null });
     try {
@@ -29,7 +29,7 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // ✅ Login
+  // Login
   login: async (credentials) => {
     set({ loading: true, error: null });
     try {
@@ -51,7 +51,7 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // ✅ Logout
+  // Logout
   logout: async () => {
     try {
       await axios.post(`${API}/users/logout`, {}, {
@@ -66,7 +66,7 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // ✅ Get Logged In User
+  // Get Logged In User
   getUser: async () => {
     set({ loading: true });
     try {
@@ -81,7 +81,7 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // ✅ Update Password
+  // Update Password
   updatePassword: async (userId, username, password) => {
     set({ loading: true });
     try {
@@ -100,7 +100,7 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // ✅ Resend OTP
+  // Resend OTP
   resendOTP: async (userId) => {
     set({ loading: true, error: null });
     try {
