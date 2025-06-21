@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import Blog from "../models/blogs.model.js";
 import User from "../models/user.model.js";
+import rateLimit from "express-rate-limit";
 
 export const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -20,6 +21,9 @@ export const protect = async (req, res, next) => {
       return res
         .status(401)
         .json({ success: false, message: "User not found" });
+    }
+    if(user.tokenVersion !== decoded.tokenVersion){
+      return res.status(401).json({success:false,message:"Token has been revoked "})
     }
     req.user = user; // แนบ user ทั้งคน ไม่ใช่แค่ id
     next();
@@ -80,3 +84,11 @@ export const isSuperAdmin = (req, res, next) => {
   }
   next();
 };
+
+export const otpRateLimit = rateLimit({
+ 
+    windowMs: 3 * 60 * 1000, // 15 นาที
+    max: 3,
+    message: "Too many OTP requests, please try again later.",
+
+})

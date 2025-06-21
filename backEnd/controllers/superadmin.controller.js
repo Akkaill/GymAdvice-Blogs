@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import { createLog } from "../utils/log.js";
+import Notification from "../models/notification.model.js";
 
 export const updateUserRole = async (req, res) => {
   const { userId } = req.params; // จาก URL
@@ -28,7 +29,12 @@ export const updateUserRole = async (req, res) => {
       req.user._id,
       `Role updated for user ID: ${username}`
     );
-
+    await Notification.create({
+      user: targetUser._id,
+      title: `Your role was updated to ${targetUser.role}`,
+      type: "role_updated",
+      createdBy: req.user._id,
+    });
     res.json({ success: true, message: "Role updated", user });
     console.log(
       `[ROLE CHANGE] SuperAdmin: ${req.user.username} changed role of User ID: ${userId} to ${role}`
@@ -66,6 +72,7 @@ export const deleteUser = async (req, res) => {
 
 export const createAdmin = async (req, res) => {
   const { username, password } = req.body;
+  const { userId } = req.params;
 
   const userExists = await User.findOne({ username });
   if (userExists)
@@ -78,8 +85,29 @@ export const createAdmin = async (req, res) => {
     req.user._id,
     `Admin has created: ${newAdmin.username}`
   );
+  await Notification.create({
+    user: userId, // ผู้ที่ถูกสร้าง
+    title: `Admin ${userId.username} was created`,
+    type: "admin_created",
+    createdBy: req.userId, // คนที่สร้าง
+  });
 
   res
     .status(201)
     .json({ success: true, message: "SuperAdmin Created", user: newAdmin });
+};
+
+export const revoke = async (req, res) => {
+  const user = await User.findById(req.params.userId);
+  user.tokenVersion += 1;
+  await user.save();
+  await createLog("SuperAdmin revoked ", req.user._id);
+  await Notification.create({
+    user: targetUser._id,
+    title: "Your account has been revoked",
+    type: "account_revoked",
+    createdBy: req.user._id,
+  });
+
+  res.status(201).json({ success: "true", message: "User has been revoked" });
 };

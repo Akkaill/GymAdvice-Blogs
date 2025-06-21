@@ -5,11 +5,13 @@ import {
   getAllUsers,
   updateUserPassword,
   logout,
+  resendOTP,
 } from "../controllers/user.controller.js";
 import {
   protect,
   isAdmin,
   isSelfOrAdmin,
+  otpRateLimit,
 } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -18,6 +20,7 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 router.post("/logout", protect, logout);
+router.post("/resend-otp", otpRateLimit, resendOTP);
 
 //Admin or General User
 router.put("/:id/password", protect, isSelfOrAdmin, updateUserPassword);
