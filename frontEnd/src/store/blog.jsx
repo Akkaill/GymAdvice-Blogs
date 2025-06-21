@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import axios from "axios";
 
 export const useBlogStore = create((set, get) => ({
   blogs: [],
@@ -8,7 +9,9 @@ export const useBlogStore = create((set, get) => ({
   search: "",
   sortBy: "createdAt",
   order: "desc",
+
   resetBlogs: () => set({ blogs: [], nextCursor: null, hasMore: true }),
+
   setSearch: (newSearch) => {
     set({
       search: newSearch,
@@ -19,7 +22,6 @@ export const useBlogStore = create((set, get) => ({
   },
 
   setSort: (sortBy, order = "desc") => {
-    console.log("💾 setSort called with:", sortBy, order);
     set({
       sortBy,
       order,
@@ -31,106 +33,92 @@ export const useBlogStore = create((set, get) => ({
 
   fetchPaginatedBlogs: async (cursor = null, limit = 6) => {
     const { search, sortBy, order } = get();
-    console.log(
-      "FETCHING blogs with sortBy:",
-      get().sortBy,
-      "order:",
-      get().order
-    );
-    console.log("🔥 FETCHING blogs with:", { search, sortBy, order, cursor });
     set({ loading: true });
 
     try {
-      const query = new URLSearchParams({
-        limit: String(limit),
+      const query = {
+        limit,
         search,
         sortBy,
         order,
-      });
-      if (cursor) query.append("cursor", cursor);
+      };
+      if (cursor) query.cursor = cursor;
 
-      const res = await fetch(`/api/blogs?${query.toString()}`);
-
-      // เช็กว่า API ตอบ 2xx หรือไม่
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`API error: ${res.status} - ${errorText}`);
-      }
-      const result = await res.json();
+      const res = await axios.get("/api/blogs", { params: query });
       // ป้องกัน result.data ไม่เป็น array
-      if (!Array.isArray(result.data)) {
-        console.error("❌ Invalid data format from API:", result.data);
-        throw new Error("Invalid data format from API: data is not an array");
+      if (!Array.isArray(res.data.data)) {
+        throw new Error("Invalid data format: blogs must be array");
       }
 
       set((state) => ({
-        blogs: cursor ? [...state.blogs, ...result.data] : result.data,
+        blogs: cursor ? [...state.blogs, ...res.data.data] : res.data.data,
         loading: false,
-        hasMore: result.hasMore ?? false,
-        nextCursor: result.nextCursor ?? null,
+        hasMore: res.data.hasMore ?? false,
+        nextCursor: res.data.nextCursor ?? null,
       }));
-    } catch (error) {
-      console.error("Error fetching blogs:", error);
+    } catch (err) {
+      console.error("Error fetching blogs:", err);
       set({ loading: false });
-      throw error;
+      throw err;
     }
   },
+
   createBlog: async (newBlog) => {
-    if (
-      !newBlog.title ||
-      !newBlog.subtitle ||
-      !newBlog.description ||
-      !newBlog.image
-    ) {
+    const { title, subtitle, description, image } = newBlog;
+    if (!title || !subtitle || !description || !image) {
       return { success: false, message: "Please fill all fields" };
     }
 
     try {
-      const res = await fetch("/api/blogs", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newBlog),
-      });
-
-      const data = await res.json();
+      const res = await axios.post("/api/blogs", newBlog);
 
       set((state) => ({
-        blogs: [...state.blogs, data.data],
+        blogs: [...state.blogs, res.data.data],
       }));
 
       return { success: true, message: "Created successfully" };
-    } catch (error) {
-      return { success: false, message: "Something went wrong." };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || "Something went wrong.",
+      };
     }
   },
+
   fetchBlogs: async () => {
-    const res = await fetch("/api/blogs");
-    const data = await res.json();
-    set({ blogs: data.data });
+    try {
+      const res = await axios.get("/api/blogs");
+      set({ blogs: res.data.data });
+    } catch (err) {
+      console.error("Error loading all blogs:", err);
+    }
   },
+
   fetchBlogById: async (id) => {
     try {
-      const res = await fetch(`/api/blogs/${id}`);
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-      return data.data;
-    } catch (error) {
-      console.error("Failed to fetch blog by ID:", error);
+      const res = await axios.get(`/api/blogs/${id}`);
+      return res.data.data;
+    } catch (err) {
+      console.error("Failed to fetch blog by ID:", err);
       return null;
     }
   },
 
   deleteBlog: async (id) => {
-    const res = await fetch(`/api/blogs/${id}`, {
-      method: "DELETE",
-    });
-    const data = await res.json();
-    if (!data.success) return { success: false, message: data.message };
+    try {
+      const res = await axios.delete(`/api/blogs/${id}`);
+      if (!res.data.success) return { success: false, message: res.data.message };
 
-    //update ui immediatly without needing a refresh
-    set((state) => ({ blogs: state.blogs.filter((blog) => blog._id !== id) }));
-    return { success: true, message: data.message };
+      set((state) => ({
+        blogs: state.blogs.filter((blog) => blog._id !== id),
+      }));
+
+      return { success: true, message: res.data.message };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || "Failed to delete blog.",
+      };
+    }
   },
 }));
