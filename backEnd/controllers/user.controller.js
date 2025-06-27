@@ -7,8 +7,8 @@ import { sendOTP } from "../utils/sendOtp.js";
 import TempOtp from "../models/tempOtp.model.js";
 import { sendEmailOTP } from "../utils/sendEmailOTP.js";
 import { sendSMSOTP } from "../utils/sendSMSOTP.js";
-// ดึงผู้ใช้ทั้งหมด (admin only)
 
+// ดึงผู้ใช้ทั้งหมด (admin only)
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password"); // ไม่คืน password
@@ -19,32 +19,97 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-export const register = async (req, res) => {
-  const { username, password } = req.body;
-  const settings = await SecuritySettings.findOne();
-  if (settings && !settings.registrationEnabled) {
+export const preRegister = async (req, res) => {
+  const { username, password, email, phone } = req.body;
+
+  if (!username || !password || (!email && !phone)) {
     return res
-      .status(403)
-      .json({ success: "false", message: "Registration is disabled" });
+      .status(400)
+      .json({ success: false, message: "Missing required fields" });
   }
+
+const existingUser = await User.findOne({ email });
+
+if (existingUser) {
+  return res.status(400).json({
+    success: false,
+    message: "Email already exists",
+  });
+}
+
+
+  console.log("📤 Sending OTP with tempData:", { username, password });
+  await sendOTP(null, email, phone, {
+    extra: { username, password },
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "OTP sent. Please verify.",
+    contact: email || phone,
+  });
+};
+
+export const verifyRegister = async (req, res) => {
+  const { otp, email, phone } = req.body;
+  console.log(">> VerifyRegister Request:", { otp, email, phone });
+  const query = email ? { email } : { phone };
+
+  const temp = await TempOtp.findOne(query);
+  if (!temp) {
+    return res
+      .status(400)
+      .json({ success: false, message: "No pending registration found" });
+  }
+
+  if (temp.otp !== otp) {
+    return res.status(400).json({ success: false, message: "Invalid OTP" });
+  }
+
+  if (temp.expiresAt < new Date()) {
+    return res.status(400).json({ success: false, message: "OTP expired" });
+  }
+
+  console.log("✅ TempOtp found:", temp);
+  if (!temp.tempData?.username || !temp.tempData?.password){
+    return res.status(400).json({
+      success: false,
+      message: "Invalid data. Please register again.",
+    });
+  }
+
   try {
-    const user = new User({ username, password });
-    await user.save();
-    res.status(201).json({ success: true, message: "User Created" });
-  } catch (error) {
-    console.log("Error in Create User", error.message);
-    res.status(500).json({ success: false, message: "Failed to create user" });
+    const newUser = new User({
+      username: temp.tempData.username,
+      password: temp.tempData.password,
+      email: temp.email,
+      phone: temp.phone,
+    });
+
+    await newUser.save();
+
+    // ลบ TempOtp หลังสร้าง user สำเร็จ
+    await TempOtp.deleteOne({ _id: temp._id });
+
+    return res.json({
+      success: true,
+      message: "User registered successfully",
+      userId: newUser._id,
+    });
+  } catch (err) {
+    console.error("❌ User creation failed:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const login = async (req, res) => {
-  const { username, password, email, phone, otp } = req.body;
-  const user = await User.findOne({ username });
+  const { email, password, phone, otp } = req.body;
+  const user = await User.findOne({ email });
   const now = new Date();
   if (!user) {
     return res
       .status(401)
-      .json({ success: false, message: "Invalid credentials" });
+      .json({ success: false, message: "Invalid email or password" });
   }
 
   const settings = await SecuritySettings.findOne();
@@ -119,9 +184,11 @@ export const login = async (req, res) => {
         otpRequired: true,
       };
 
-      // จำลองส่ง OTP
-
-      await sendOTP(user._id, email || phone); // mock function
+      await sendOTP(
+        user._id,
+        email || user.tempContactInfo?.email,
+        phone || user.tempContactInfo?.phone
+      );
 
       await user.save();
 
@@ -173,7 +240,7 @@ export const logout = async (req, res) => {
     res.status(500).json({ success: false, message: "Logout failed" });
   }
 };
-// เปลี่ยนรหัสผ่าน
+
 export const updateUserPassword = async (req, res) => {
   const { userId } = req.params;
   const { username, password } = req.body;
@@ -245,16 +312,98 @@ export const resendOTP = async (req, res) => {
     expiresAt: new Date(Date.now() + 5 * 60 * 1000),
   });
 
+  const email = user.tempContactInfo?.email;
+  const phone = user.tempContactInfo?.phone;
+
   if (email) {
-    await sendEmailOTP(user.tempContactInfo.email, otp);
+    await sendEmailOTP(email, otp);
   } else if (phone) {
-    await sendSMSOTP(user.tempContactInfo.phone, otp);
+    await sendSMSOTP(phone, otp);
   } else {
     throw new Error("No contact info available");
   }
 
   user.tempContactInfo.lastOtpSentAt = now;
   await user.save();
+  console.log(`[OTP] Sent OTP ${otp} to ${email || phone}`);
 
   res.json({ success: true, message: "OTP resent successfully" });
+};
+
+export const resendTempOTP = async (req, res) => {
+  const { contact } = req.body;
+
+  if (!contact)
+    return res
+      .status(400)
+      .json({ success: false, message: "Contact is required" });
+
+  const query = contact.includes("@") ? { email: contact } : { phone: contact };
+
+  const existingTemp = await TempOtp.findOne(query);
+  if (!existingTemp)
+    return res
+      .status(404)
+      .json({ success: false, message: "No pending registration found" });
+
+  const now = new Date();
+  const lastSent = existingTemp.updatedAt;
+
+  if (now - lastSent < 30 * 1000) {
+    const wait = Math.ceil((30 * 1000 - (now - lastSent)) / 1000);
+    return res.status(429).json({
+      success: false,
+      message: `Please wait ${wait}s before resending OTP`,
+    });
+  }
+
+  await sendOTP(null, existingTemp.email, existingTemp.phone, {
+    extra: {
+      username: existingTemp.username,
+      password: existingTemp.password,
+    },
+  });
+
+  res.json({ success: true, message: "OTP resent successfully" });
+};
+
+export const verifyOTP = async (req, res) => {
+  const { otp } = req.body;
+  const record = await TempOtp.findOne({ otp });
+  if (!record || record.expiresAt < new Date()) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expire OTP",
+    });
+  }
+  const user = await User.findById(record.userId);
+  if (!user) {
+    return res.status(404).json({ success: false, message: "User not found" });
+  }
+  await TempOtp.deleteMany({ userId: user._id });
+  user.tempContactInfo = {};
+  user.lockedUntil = null;
+  user.failedLoginAttempts = 0;
+  await user.save();
+  await createLog("otp_verified", user._id, "OTP verified successfully");
+  return res.json({ success: true, message: "OTP verified successfully" });
+};
+
+export const checkDuplicate = async (req, res) => {
+  const { username, email } = req.body;
+
+  const query = [];
+  if (username) query.push({ username });
+  if (email) query.push({ email });
+
+  const existing = await User.findOne({ $or: query });
+
+  if (existing) {
+    return res.status(200).json({
+      exists: true,
+      field: existing.email === email ? "email" : "username",
+    });
+  }
+
+  return res.status(200).json({ exists: false });
 };

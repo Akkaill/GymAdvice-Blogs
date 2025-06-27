@@ -10,15 +10,20 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin", "superadmin"],
       default: "user",
     },
-
     failedLoginAttempts: { type: Number, default: 0 },
     lockedUntil: { type: Date },
+    tokenVersion: { type: Number, default: 0 },
+
+  
+    email: { type: String, unique: true, required: true },
+    phone: { type: String },
+
     tempContactInfo: {
       email: String,
       phone: String,
       otpRequired: { type: Boolean, default: false },
+      lastOtpSentAt: Date,
     },
-    tokenVersion: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -27,8 +27,8 @@ app.use(cors({
   credentials:true
 }))
 app.use(express.json());
-app.use("/api/", limiter);
 app.use(helmet());
+app.use("/api/", limiter);
 
 app.use("/api/blogs", blogRoutes);
 app.use("/api/admin", adminRoutes);

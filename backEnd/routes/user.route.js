@@ -1,11 +1,15 @@
 import express from "express";
 import {
-  register,
+  preRegister,
+  verifyRegister,
   login,
   getAllUsers,
   updateUserPassword,
   logout,
   resendOTP,
+  verifyOTP,
+  resendTempOTP,
+  checkDuplicate
 } from "../controllers/user.controller.js";
 import {
   protect,
@@ -17,10 +21,15 @@ import {
 const router = express.Router();
 
 // Public
-router.post("/register", register);
+router.post("/pre-register", preRegister);
+router.post("/verify-register", verifyRegister);
 router.post("/login", login);
 router.post("/logout", protect, logout);
 router.post("/resend-otp", otpRateLimit, resendOTP);
+router.post("/resend-temp-otp",resendTempOTP)
+router.post("/verify-otp", verifyOTP);
+router.post("/check-duplicate", checkDuplicate);
+
 
 //Admin or General User
 router.put("/:id/password", protect, isSelfOrAdmin, updateUserPassword);
