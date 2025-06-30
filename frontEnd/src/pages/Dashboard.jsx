@@ -1,5 +1,8 @@
 import { useEffect } from "react";
-import { useDashboardStore } from "../store/dashboardStore";
+import { useNavigate } from "react-router-dom";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { useAuthStore } from "@/store/auth";
+import {Spinner} from "@chakra-ui/react"; 
 
 export default function Dashboard() {
   const {
@@ -11,10 +14,33 @@ export default function Dashboard() {
     loadingLogs,
   } = useDashboardStore();
 
+  const { user, loading: authLoading } = useAuthStore();
+  const navigate = useNavigate();
+
+  // ✅ เช็คสิทธิ์ก่อนเข้าหน้านี้
   useEffect(() => {
-    fetchStats();
-    fetchRecentLogs();
-  }, []);
+    if (!authLoading) {
+      if (!user || !["admin", "superadmin"].includes(user.role)) {
+        navigate("/unauthorized"); // หรือ "/login"
+      }
+    }
+  }, [authLoading, user, navigate]);
+
+  // ✅ ถ้ายังโหลด user หรือ dashboard → รอ
+  useEffect(() => {
+    if (user && ["admin", "superadmin"].includes(user.role)) {
+      fetchStats();
+      fetchRecentLogs();
+    }
+  }, [user]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex justify-center items-center h-screen text-white">
+        <Spinner /> {/* หรือใช้ text "Loading..." ก็ได้ */}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-900 text-white">
@@ -34,7 +60,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-semibold">Dashboard</h1>
           <div className="flex items-center space-x-3">
-            <span>👤 Superadmin</span>
+            <span>👤 {user?.role}</span>
             <button className="bg-red-500 px-4 py-1 rounded hover:bg-red-600 transition">Logout</button>
           </div>
         </div>
@@ -83,7 +109,9 @@ export default function Dashboard() {
                     <td className="py-2">{log.action}</td>
                     <td className="py-2">{log.performedBy?.username || "Unknown"}</td>
                     <td className="py-2">{log.performedBy?.role || "-"}</td>
-                    <td className="py-2">{new Date(log.createdAt).toLocaleString()}</td>
+                    <td className="py-2">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>

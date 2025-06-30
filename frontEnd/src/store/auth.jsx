@@ -14,12 +14,14 @@ export const useAuthStore = create((set, get) => ({
   setError: (error) => set({ error }),
 
   // Register
-  register: async (username, password) => {
+  register: async ({ email, password, phone, username }) => {
     set({ loading: true, error: null });
     try {
-      const res = await axios.post(`${API}/users/register`, {
-        username,
+      const res = await axios.post(`${API}/users/pre-register`, {
+        email,
         password,
+        phone,
+        username,
       });
       return res.data;
     } catch (err) {
@@ -29,11 +31,31 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Login
-  login: async (credentials) => {
+  verifyRegister: async ({ otp, email, phone }) => {
     set({ loading: true, error: null });
     try {
-      const res = await axios.post(`${API}/users/login`, credentials,{ withCredentials: true});
+      const res = await axios.post(`${API}/users/verify-register`, {
+        otp,
+        email,
+        phone,
+      });
+      return res.data;
+    } catch (err) {
+      set({ error: err.response?.data?.message || "OTP verification failed" });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  // Login
+  login: async (email, password) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await axios.post(
+        `${API}/users/login`,
+        { email, password },
+        { withCredentials: true }
+      );
       const { token, user } = res.data;
       localStorage.setItem("token", token);
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -41,11 +63,14 @@ export const useAuthStore = create((set, get) => ({
       return { success: true };
     } catch (err) {
       set({
-        error:
-          err.response?.data?.message ||
-          "Login failed",
+        error: err.response?.data?.message || "Login failed",
       });
-      return { success: false, requireVerification: err.response?.data?.requireVerification, email: err.response?.data?.email, phone: err.response?.data?.phone };
+      return {
+        success: false,
+        requireVerification: err.response?.data?.requireVerification,
+        email: err.response?.data?.email,
+        phone: err.response?.data?.phone,
+      };
     } finally {
       set({ loading: false });
     }
@@ -54,9 +79,13 @@ export const useAuthStore = create((set, get) => ({
   // Logout
   logout: async () => {
     try {
-      await axios.post(`${API}/users/logout`, {}, {
-        headers: { Authorization: `Bearer ${get().token}` },
-      });
+      await axios.post(
+        `${API}/users/logout`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${get().token}` },
+        }
+      );
     } catch (err) {
       console.log("Logout error:", err.message);
     } finally {
@@ -108,12 +137,28 @@ export const useAuthStore = create((set, get) => ({
       return res.data;
     } catch (err) {
       set({
-        error:
-          err.response?.data?.message || "Failed to resend OTP",
+        error: err.response?.data?.message || "Failed to resend OTP",
       });
       return { success: false };
     } finally {
       set({ loading: false });
     }
   },
+
+
+checkDuplicate: async (payload) => {
+  try {
+    const res = await axios.post(`${API}/users/check-duplicate`, payload);
+    return {
+      exists: res.data.exists,
+      field: res.data.field,
+      type: Object.keys(payload)[0], // ระบุว่าเรากำลังเช็ค field ไหน
+    };
+  } catch (err) {
+    console.error("Check duplicate failed", err);
+    return { exists: false };
+  }
+},
+
+
 }));

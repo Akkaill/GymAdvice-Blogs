@@ -10,6 +10,9 @@ import { MainLayout } from "./components/MainLayout";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import Dashboard from "./pages/Dashboard";
+import Unauthorized from "./pages/Authorization/Unauthorized";
+import NotFoundPage from "./pages/Authorization/์NotfoundPage";
+
 
 function App() {
   return (
@@ -25,6 +28,10 @@ function App() {
           <Route path="/login" element={<LoginPage/>} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          
+          <Route path="*" element={<NotFoundPage/>}/>
+
         </Route>
       </Routes>
     </Box>
