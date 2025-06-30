@@ -28,15 +28,14 @@ export const preRegister = async (req, res) => {
       .json({ success: false, message: "Missing required fields" });
   }
 
-const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ email });
 
-if (existingUser) {
-  return res.status(400).json({
-    success: false,
-    message: "Email already exists",
-  });
-}
-
+  if (existingUser) {
+    return res.status(400).json({
+      success: false,
+      message: "Email already exists",
+    });
+  }
 
   console.log("📤 Sending OTP with tempData:", { username, password });
   await sendOTP(null, email, phone, {
@@ -71,7 +70,7 @@ export const verifyRegister = async (req, res) => {
   }
 
   console.log("✅ TempOtp found:", temp);
-  if (!temp.tempData?.username || !temp.tempData?.password){
+  if (!temp.tempData?.username || !temp.tempData?.password) {
     return res.status(400).json({
       success: false,
       message: "Invalid data. Please register again.",
@@ -390,20 +389,31 @@ export const verifyOTP = async (req, res) => {
 };
 
 export const checkDuplicate = async (req, res) => {
-  const { username, email } = req.body;
+  let { username, email } = req.body;
 
+  if (username) username = username.trim();
+  if (email) email = email.trim().toLowerCase(); 
   const query = [];
   if (username) query.push({ username });
   if (email) query.push({ email });
 
+  if (query.length === 0) {
+    return res.status(400).json({ error: "No input provided" });
+  }
+
   const existing = await User.findOne({ $or: query });
 
+  let field = null;
   if (existing) {
+    if (username && existing.username === username) field = "username";
+    if (email && existing.email === email) field = "email";
+
     return res.status(200).json({
       exists: true,
-      field: existing.email === email ? "email" : "username",
+      field,
     });
   }
 
-  return res.status(200).json({ exists: false });
+  return res.status(200).json({ exists: false, field: null });
 };
+
