@@ -19,6 +19,7 @@ import {
   Spinner,
   useDisclosure,
 } from "@chakra-ui/react";
+import { FaHeart } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { CiSquarePlus } from "react-icons/ci";
 import { HiMenu, HiX } from "react-icons/hi";
@@ -27,19 +28,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/auth";
 import { useNotificationStore } from "../store/notificationStore";
 
-const MotionMenuList = motion(MenuList);
+const MotionMenuList = motion.create(MenuList);
 
 const Navbar = () => {
   const { isOpen, onClose, onOpen } = useDisclosure();
   const { user, logout } = useAuthStore();
-  const {
-    notifications,
-    unseenCount,
-    fetchNotifications,
-    markNotificationAsRead,
-  } = useNotificationStore();
+  const { notifications, unseenCount, fetchNotifications, markAsRead } =
+    useNotificationStore();
   const navigate = useNavigate();
-  const MotionVStack = motion(VStack);
+  const MotionVStack = motion.create(VStack);
 
   useEffect(() => {
     if (user) fetchNotifications();
@@ -57,13 +54,20 @@ const Navbar = () => {
 
   return (
     <Box
-      w="full"
-      bg="white"
-      shadow="md"
-      fontFamily="Inter, sans-serif"
-      position="sticky"
-      top={0}
+      position="fixed"
+      top={2}
       zIndex={1000}
+      w="60%"
+      mx="auto"
+      left="50%"
+      transform="translateX(-50%)"
+      borderRadius="2xl"
+      backdropFilter="blur(20px)"
+      bg="rgba(255, 255, 255, 0.2)"
+      boxShadow="lg"
+      px={4}
+      py={1}
+      fontFamily="Inter, sans-serif"
     >
       <Container maxW="1140px" px={6} py={4}>
         <Flex justify="space-between" align="center">
@@ -122,8 +126,15 @@ const Navbar = () => {
                   <MotionMenuList
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition="all 0.25s ease-in-out"
                     p={2}
+                    borderRadius="lg"
+                    boxShadow="lg"
+                    bg="white"
+                    minW="200px"
+                    maxH="300px"
+                    overflowY="auto"
+                    zIndex={2000}
                   >
                     <MenuGroup title="Notifications">
                       {notifications.length === 0 ? (
@@ -132,7 +143,8 @@ const Navbar = () => {
                         notifications.map((n) => (
                           <MenuItem
                             key={n._id}
-                            onClick={() => markNotificationAsRead(n._id)}
+                            onClick={() => markAsRead(n._id)}
+                            transition="all 0.25s ease-in-out"
                           >
                             <Badge
                               size="xs"
@@ -149,14 +161,28 @@ const Navbar = () => {
 
                 {/* Avatar Menu */}
                 <Menu>
-                  <MenuButton>
+                  <MenuButton
+                    as={Button}
+                    variant="ghost"
+                    p={0}
+                    _hover={{ bg: "transparent" }}
+                    _active={{ bg: "transparent" }}
+                    transition="all 0.25s ease-in-out"
+                  >
                     <Avatar size="sm" name={user.username} />
                   </MenuButton>
                   <MotionMenuList
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2 }}
+                    transition="all 0.25s ease-in-out"
                     p={2}
+                    borderRadius="lg"
+                    boxShadow="lg"
+                    bg="white"
+                    minW="200px"
+                    maxH="300px"
+                    overflowY="auto"
+                    zIndex={2000}
                   >
                     <MenuItem icon={<FiUser />}>Profile</MenuItem>
                     <MenuItem icon={<FiSettings />} onClick={handleSwitchRole}>
@@ -216,7 +242,7 @@ const Navbar = () => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
+              transition="all 0.25s ease-in-out"
             >
               <Button w="full" variant="ghost" onClick={() => handleNav("/")}>
                 Home
@@ -228,7 +254,13 @@ const Navbar = () => {
               >
                 Blogs
               </Button>
-
+              <Button
+                leftIcon={<FaHeart />}
+                colorScheme="pink"
+                onClick={() => handleNav("/favorites")}
+              >
+                My Favorites
+              </Button>
               {user ? (
                 <>
                   <Button
@@ -294,15 +326,33 @@ const Navbar = () => {
   );
 };
 
-const NavLink = ({ to, children, color = "black" }) => (
+const NavLink = ({ to, children, color = "gray.800" }) => (
   <Text
     as={Link}
     to={to}
-    fontSize="md"
+    position="relative"
+    px={2}
+    py={1}
     fontWeight="500"
+    fontSize="md"
     color={color}
-    _hover={{ color: "blue.500", textDecoration: "underline" }}
-    transition="0.2s"
+    transition="all 0.3s ease"
+    _before={{
+      content: `""`,
+      position: "absolute",
+      bottom: 0,
+      left: 2,
+      width: "0%",
+      height: "2px",
+      bgGradient: "linear(to-r, blue.400, teal.400)",
+      borderRadius: "full",
+      transition: "width 0.3s ease-in-out",
+    }}
+    _hover={{
+      color: "teal.500",
+      transform: "scale(1.04)",
+      _before: { width: "80%" },
+    }}
   >
     {children}
   </Text>
