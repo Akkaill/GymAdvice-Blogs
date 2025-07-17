@@ -8,6 +8,24 @@ import TempOtp from "../models/tempOtp.model.js";
 import { sendEmailOTP } from "../utils/sendEmailOTP.js";
 import { sendSMSOTP } from "../utils/sendSMSOTP.js";
 
+// สร้าง Access Token
+const createAccessToken = (user) => {
+  return jwt.sign(
+    { id: user._id, tokenVersion: user.tokenVersion },
+    process.env.JWT_SECRET,
+    { expiresIn: "15m" }
+  );
+};
+
+// สร้าง Refresh Token
+const createRefreshToken = (user) => {
+  return jwt.sign(
+    { id: user._id, tokenVersion: user.tokenVersion },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+};
+
 // ดึงผู้ใช้ทั้งหมด (admin only)
 export const getAllUsers = async (req, res) => {
   try {
@@ -105,6 +123,7 @@ export const login = async (req, res) => {
   const { email, password, phone, otp } = req.body;
   const user = await User.findOne({ email });
   const now = new Date();
+
   if (!user) {
     return res
       .status(401)
@@ -120,19 +139,12 @@ export const login = async (req, res) => {
     user.lockedUntil > now &&
     user.failedLoginAttempts >= maxAttempts + 2
   ) {
-    user.tempContactInfo = {
-      email: email || "",
-      phone: phone || "",
-      otpRequired: true,
-    };
-
+    user.tempContactInfo = { email, phone, otpRequired: true };
     await user.save();
-
     await sendOTP(user._id, email, phone);
-    return res.status(401).json({
-      success: false,
-      message: `Locked. OTP sent.`,
-    });
+    return res
+      .status(401)
+      .json({ success: false, message: `Locked. OTP sent.` });
   }
 
   // 2.ถ้า otpRequired แล้ว ยังไม่ส่ง otp เเละ เช็ค OTP จากฐานข้อมูล (ถ้าถูกล็อกไว้แล้ว)
@@ -146,14 +158,13 @@ export const login = async (req, res) => {
     }
 
     const record = await TempOtp.findOne({ userId: user._id });
-
     if (!record || record.otp !== otp || record.expiresAt < new Date()) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid or expired OTP" });
     }
-
     // OTP ถูกต้อง → clear
+
     await TempOtp.deleteMany({ userId: user._id });
     user.failedLoginAttempts = 0;
     user.lockedUntil = null;
@@ -165,32 +176,21 @@ export const login = async (req, res) => {
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-
     // 3.1 ล็อค 3 นาที ถ้าเกิน maxAttempts
-    if (user.failedLoginAttempts >= maxAttempts) {
-      user.lockedUntil = new Date(Date.now() + 3 * 60 * 1000); // ล็อค 3 นาที
-    }
 
-    // 3.2 ถ้าเกิน 3 นาทีแล้ว ยังพลาดอีก 2 รอบ → บังคับยืนยันตัวตน
+    if (user.failedLoginAttempts >= maxAttempts) {
+      user.lockedUntil = new Date(Date.now() + 3 * 60 * 1000);
+    }
+    // 3.2 ถ้าเกิน 3 นาทีแล้ว ยังพลาดอีก 2 รอบ → บังคับยืนยันตัวต
+
     if (
       user.lockedUntil &&
       user.lockedUntil < new Date() &&
       user.failedLoginAttempts >= maxAttempts + 2
     ) {
-      user.tempContactInfo = {
-        email: email || "",
-        phone: phone || "",
-        otpRequired: true,
-      };
-
-      await sendOTP(
-        user._id,
-        email || user.tempContactInfo?.email,
-        phone || user.tempContactInfo?.phone
-      );
-
+      user.tempContactInfo = { email, phone, otpRequired: true };
+      await sendOTP(user._id, email, phone);
       await user.save();
-
       return res.status(401).json({
         success: false,
         message: "Verification required. Please enter OTP",
@@ -204,21 +204,27 @@ export const login = async (req, res) => {
       .json({ success: false, message: "Invalid credentials" });
   }
 
-  // 4️. ถ้ารหัสผ่านถูก สร้าง Token
+  // 4️. ถ้ารหัสผ่านถูก สร้าง Token Login สำเร็จ
   user.failedLoginAttempts = 0;
   user.lockedUntil = null;
   user.tempContactInfo = {};
   await user.save();
   await createLog("login", user._id, `User ${user.username} logged in`);
-  const token = jwt.sign(
-    { id: user._id, tokenVersion: user.tokenVersion },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
 
-  res.json({
+  const accessToken = createAccessToken(user);
+  const refreshToken = createRefreshToken(user);
+
+  // ทำการเซ็ทคุกกี้ เป็น refreshToken เพื่อยืดระยะเวลาจากการที่เเยก accessToken กับ refreshToken,
+  res.cookie("jid", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.json({
     success: true,
-    token,
+    accessToken,
     user: {
       id: user._id,
       username: user.username,
@@ -227,13 +233,77 @@ export const login = async (req, res) => {
   });
 };
 
+// 🔁 Refresh Token endpoint
+export const refreshToken = async (req, res) => {
+  const token = req.cookies.jid;
+  if (!token)
+    return res
+      .status(401)
+      .json({ success: false, message: "No refresh token" });
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findById(payload.id);
+    if (!user || user.tokenVersion !== payload.tokenVersion)
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid refresh token" });
+
+    const accessToken = createAccessToken(user);
+    const refreshToken = createRefreshToken(user);
+
+    res.cookie("jid", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({ success: true, accessToken });
+  } catch (err) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Invalid or expired refresh token" });
+  }
+};
+
+export const getMe = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ success: false, message: "No token" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        username: user.username,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    res.status(401).json({ success: false, message: "Invalid token" });
+  }
+};
+
 export const logout = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     user.tokenVersion += 1;
     await user.save();
     await createLog("Logout", req.user._id, "User logged out");
-    res.json({ success: true, message: "Logged out successfully" });
+    res.clearCookie("jid");
+    return res.json({ success: true, message: "Logged out successfully" });
   } catch (err) {
     console.error("Logout Error:", err.message);
     res.status(500).json({ success: false, message: "Logout failed" });
@@ -392,7 +462,7 @@ export const checkDuplicate = async (req, res) => {
   let { username, email } = req.body;
 
   if (username) username = username.trim();
-  if (email) email = email.trim().toLowerCase(); 
+  if (email) email = email.trim().toLowerCase();
   const query = [];
   if (username) query.push({ username });
   if (email) query.push({ email });
@@ -416,4 +486,3 @@ export const checkDuplicate = async (req, res) => {
 
   return res.status(200).json({ exists: false, field: null });
 };
-

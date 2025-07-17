@@ -20,7 +20,7 @@ export default function LoginForm() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const { login, error, loading } = useAuthStore();
+  const { user, login, error, loading } = useAuthStore();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -40,7 +40,8 @@ export default function LoginForm() {
 
     const res = await login(form.email, form.password);
 
-    if (res.success) {
+    
+     if (res.success) {
       navigate("/dashboard");
     } else if (res.requireVerification) {
       toast({
@@ -57,6 +58,8 @@ export default function LoginForm() {
           email: form.email,
         },
       });
+    } else {
+      navigate("/");
     }
   };
 

@@ -4,32 +4,23 @@ import User from "../models/user.model.js";
 import rateLimit from "express-rate-limit";
 
 export const protect = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({ success: false, message: "No token provided" });
-  }
-  const token = authHeader.split(" ")[1];
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
+    const authHeader = req.headers.authorization;
+    if (!authHeader)
+      return res.status(401).json({ success: false, message: "No token" });
 
-    if (!user) {
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).lean();
+    if (!user)
       return res
         .status(401)
         .json({ success: false, message: "User not found" });
-    }
-    if(user.tokenVersion !== decoded.tokenVersion){
-      return res.status(401).json({success:false,message:"Token has been revoked "})
-    }
-    req.user = user; // แนบ user ทั้งคน ไม่ใช่แค่ id
+
+    req.user = user;
     next();
-  } catch (error) {
-    console.log("JWT ERROR", error.message);
-    res.status(401).json({ success: false, message: "Invalid token" });
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 };
 
@@ -86,9 +77,7 @@ export const isSuperAdmin = (req, res, next) => {
 };
 
 export const otpRateLimit = rateLimit({
- 
-    windowMs: 3 * 60 * 1000, // 15 นาที
-    max: 3,
-    message: "Too many OTP requests, please try again later.",
-
-})
+  windowMs: 3 * 60 * 1000, // 15 นาที
+  max: 3,
+  message: "Too many OTP requests, please try again later.",
+});

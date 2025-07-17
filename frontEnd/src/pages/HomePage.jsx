@@ -7,6 +7,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { Section } from "@/components/Section";
 import { SearchFilters } from "@/components/SearchFilters";
 
+
 export const HomePage = () => {
   const { fetchPaginatedBlogs, blogs, loading } = useBlogStore();
 
