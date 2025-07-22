@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -20,15 +20,19 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { FaHeart } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { CiSquarePlus } from "react-icons/ci";
 import { HiMenu, HiX } from "react-icons/hi";
 import { FiBell, FiSettings, FiRepeat, FiLogOut, FiUser } from "react-icons/fi";
+import { FaRegHeart } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/auth";
 import { useNotificationStore } from "../store/notificationStore";
 
+/* Motion wrappers */
+const MotionBox = motion.create(Box);
 const MotionMenuList = motion.create(MenuList);
+const MotionVStack = motion.create(VStack);
 
 const Navbar = () => {
   const { isOpen, onClose, onOpen } = useDisclosure();
@@ -36,11 +40,22 @@ const Navbar = () => {
   const { notifications, unseenCount, fetchNotifications, markAsRead } =
     useNotificationStore();
   const navigate = useNavigate();
-  const MotionVStack = motion.create(VStack);
+  const location = useLocation();
+
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     if (user) fetchNotifications();
   }, [user]);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const isHome = location.pathname === "/";
+  const isHeroMode = isHome && !scrolled;
 
   const handleSwitchRole = () => {
     navigate("/settings");
@@ -52,306 +67,347 @@ const Navbar = () => {
     onClose();
   };
 
+  const fg = isHeroMode ? "white" : "gray.800";
+  const iconFg = isHeroMode ? "white" : "black";
+
   return (
     <Box
       position="fixed"
-      top={2}
+      top="0"
+      left="0"
+      w="100%"
       zIndex={1000}
-      w="60%"
-      mx="auto"
-      left="50%"
-      transform="translateX(-50%)"
-      borderRadius="2xl"
-      backdropFilter="blur(20px)"
-      bg="rgba(255, 255, 255, 0.2)"
-      boxShadow="lg"
-      px={4}
-      py={1}
-      fontFamily="Inter, sans-serif"
+      pointerEvents="none"
     >
-      <Container maxW="1140px" px={6} py={4}>
-        <Flex justify="space-between" align="center">
-          {/* Logo */}
-          <Text
-            fontSize="2xl"
-            fontWeight="bold"
-            as={Link}
-            to="/"
-            _hover={{ opacity: 0.7 }}
-            transition="0.3s"
-          >
-            Gym Advice
-          </Text>
-
-          {/* Desktop Menu */}
-          <HStack
-            spacing={5}
-            display={{ base: "none", md: "flex" }}
-            align="center"
-          >
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/blogs">Blogs</NavLink>
-
-            {user && (
-              <>
-                <IconButton
-                  variant="ghost"
-                  as={Link}
-                  to="/create"
-                  icon={<CiSquarePlus size={22} />}
-                  aria-label="Create Blog"
-                />
-                {user.role === "admin" && <NavLink to="/admin">Admin</NavLink>}
-                {user.role === "superadmin" && (
-                  <NavLink to="/superadmin">Superadmin</NavLink>
-                )}
-
-                {/* Notifications */}
-                <Menu>
-                  <MenuButton position="relative">
-                    <FiBell size={20} />
-                    {unseenCount > 0 && (
-                      <Badge
-                        colorScheme="red"
-                        borderRadius="full"
-                        position="absolute"
-                        top="-2px"
-                        right="-2px"
-                        fontSize="xs"
-                      >
-                        {unseenCount}
-                      </Badge>
-                    )}
-                  </MenuButton>
-                  <MotionMenuList
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition="all 0.25s ease-in-out"
-                    p={2}
-                    borderRadius="lg"
-                    boxShadow="lg"
-                    bg="white"
-                    minW="200px"
-                    maxH="300px"
-                    overflowY="auto"
-                    zIndex={2000}
-                  >
-                    <MenuGroup title="Notifications">
-                      {notifications.length === 0 ? (
-                        <Spinner size="sm" />
-                      ) : (
-                        notifications.map((n) => (
-                          <MenuItem
-                            key={n._id}
-                            onClick={() => markAsRead(n._id)}
-                            transition="all 0.25s ease-in-out"
-                          >
-                            <Badge
-                              size="xs"
-                              colorScheme={n.read ? "gray" : "blue"}
-                              mr={2}
-                            />
-                            {n.title}
-                          </MenuItem>
-                        ))
-                      )}
-                    </MenuGroup>
-                  </MotionMenuList>
-                </Menu>
-
-                {/* Avatar Menu */}
-                <Menu>
-                  <MenuButton
-                    as={Button}
-                    variant="ghost"
-                    p={0}
-                    _hover={{ bg: "transparent" }}
-                    _active={{ bg: "transparent" }}
-                    transition="all 0.25s ease-in-out"
-                  >
-                    <Avatar size="sm" name={user.username} />
-                  </MenuButton>
-                  <MotionMenuList
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition="all 0.25s ease-in-out"
-                    p={2}
-                    borderRadius="lg"
-                    boxShadow="lg"
-                    bg="white"
-                    minW="200px"
-                    maxH="300px"
-                    overflowY="auto"
-                    zIndex={2000}
-                  >
-                    <MenuItem icon={<FiUser />}>Profile</MenuItem>
-                    <MenuItem icon={<FiSettings />} onClick={handleSwitchRole}>
-                      Settings
-                    </MenuItem>
-                    {user.role !== "superadmin" && (
-                      <MenuItem icon={<FiRepeat />} onClick={handleSwitchRole}>
-                        Switch Role
-                      </MenuItem>
-                    )}
-                    <MenuDivider />
-                    <MenuItem
-                      icon={<FiLogOut />}
-                      color="red.500"
-                      onClick={logout}
-                    >
-                      Logout
-                    </MenuItem>
-                  </MotionMenuList>
-                </Menu>
-              </>
-            )}
-
-            {!user && (
-              <>
-                <NavLink to="/login" color="blue.600">
-                  Login
-                </NavLink>
-                <NavLink to="/register" color="green.600">
-                  Register
-                </NavLink>
-              </>
-            )}
-          </HStack>
-
-          {/* Mobile Menu Icon */}
-          <IconButton
-            display={{ base: "flex", md: "none" }}
-            onClick={isOpen ? onClose : onOpen}
-            icon={isOpen ? <HiX size={24} /> : <HiMenu size={24} />}
-            aria-label="Toggle Menu"
-            variant="ghost"
-          />
-        </Flex>
-
-        {/* Mobile Menu Items */}
-        <AnimatePresence>
-          {isOpen && (
-            <MotionVStack
-              spacing={4}
-              bg="gray.50"
-              p={4}
-              rounded="md"
-              mt={3}
-              shadow="md"
-              display={{ base: "flex", md: "none" }}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition="all 0.25s ease-in-out"
+      <MotionBox
+        pointerEvents="auto"
+        mx="auto"
+        fontFamily="Inter, sans-serif"
+        px={4}
+        py={2}
+        variants={{
+          hero: {
+            width: "100%",
+            borderRadius: "0px",
+            backgroundColor: "rgba(255,255,255,0)",
+            boxShadow: "0 0 0 rgba(0,0,0,0)",
+            y: 0,
+          },
+          compact: {
+            width: "75%",
+            borderRadius: "1.25rem",
+            backgroundColor: "rgba(255,255,255,0.9)",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+            y: 20,
+          },
+        }}
+        initial="hero"
+        animate={isHeroMode ? "hero" : "compact"}
+        transition={{ duration: 0.35, ease: "easeInOut" }}
+      >
+        <Container maxW="1140px" px={6} py={4}>
+          <Flex justify="space-between" align="center">
+            {/* Logo */}
+            <Text
+              fontSize="2xl"
+              fontWeight="bold"
+              as={Link}
+              to="/"
+              _hover={{ opacity: 0.7 }}
+              color={fg}
+              transition="0.3s"
             >
-              <Button w="full" variant="ghost" onClick={() => handleNav("/")}>
+              Gym Advice
+            </Text>
+
+            {/* Desktop Menu */}
+            <HStack
+              spacing={5}
+              display={{ base: "none", md: "flex" }}
+              align="center"
+            >
+              <NavLink to="/" scrolled={!isHeroMode}>
                 Home
-              </Button>
-              <Button
-                w="full"
-                variant="ghost"
-                onClick={() => handleNav("/blogs")}
-              >
+              </NavLink>
+              <NavLink to="/blogs" scrolled={!isHeroMode}>
                 Blogs
-              </Button>
-              <Button
-                leftIcon={<FaHeart />}
-                colorScheme="pink"
-                onClick={() => handleNav("/favorites")}
-              >
-                My Favorites
-              </Button>
-              {user ? (
+              </NavLink>
+
+              {user && (
                 <>
-                  <Button
-                    w="full"
+                  <IconButton
                     variant="ghost"
-                    onClick={() => handleNav("/create")}
-                  >
-                    Create
-                  </Button>
+                    as={Link}
+                    to="/create"
+                    icon={<CiSquarePlus size={22} />}
+                    aria-label="Create Blog"
+                    color={iconFg}
+                    _hover={{
+                      bg: isHeroMode ? "whiteAlpha.200" : "gray.100",
+                    }}
+                  />
                   {user.role === "admin" && (
-                    <Button
-                      w="full"
-                      variant="ghost"
-                      onClick={() => handleNav("/admin")}
-                    >
+                    <NavLink to="/admin" scrolled={!isHeroMode}>
                       Admin
-                    </Button>
+                    </NavLink>
                   )}
                   {user.role === "superadmin" && (
+                    <NavLink to="/superadmin" scrolled={!isHeroMode}>
+                      Superadmin
+                    </NavLink>
+                  )}
+
+                  {/* Notifications */}
+                  <Menu>
+                    <MenuButton position="relative">
+                      <FiBell size={20} color={iconFg} />
+                      {unseenCount > 0 && (
+                        <Badge
+                          colorScheme="red"
+                          borderRadius="full"
+                          position="absolute"
+                          top="-2px"
+                          right="-2px"
+                          fontSize="xs"
+                        >
+                          {unseenCount}
+                        </Badge>
+                      )}
+                    </MenuButton>
+                    <MotionMenuList
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.2 }}
+                      p={2}
+                      borderRadius="lg"
+                      boxShadow="lg"
+                      bg="white"
+                      minW="200px"
+                      maxH="300px"
+                      overflowY="auto"
+                      zIndex={2000}
+                    >
+                      <MenuGroup title="Notifications">
+                        {notifications.length === 0 ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          notifications.map((n) => (
+                            <MenuItem
+                              key={n._id}
+                              onClick={() => markAsRead(n._id)}
+                              transition="all 0.25s ease-in-out"
+                            >
+                              <Badge
+                                size="xs"
+                                colorScheme={n.read ? "gray" : "blue"}
+                                mr={2}
+                              />
+                              {n.title}
+                            </MenuItem>
+                          ))
+                        )}
+                      </MenuGroup>
+                    </MotionMenuList>
+                  </Menu>
+
+                  {/* Avatar Menu */}
+                  <Menu>
+                    <MenuButton
+                      as={Button}
+                      variant="ghost"
+                      p={0}
+                      _hover={{ bg: "transparent" }}
+                      _active={{ bg: "transparent" }}
+                      transition="all 0.25s ease-in-out"
+                    >
+                      <Avatar size="sm" name={user.username} />
+                    </MenuButton>
+                    <MotionMenuList
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.97 }}
+                      transition={{ duration: 0.2 }}
+                      p={2}
+                      borderRadius="lg"
+                      boxShadow="lg"
+                      bg="white"
+                      minW="200px"
+                      maxH="300px"
+                      overflowY="auto"
+                      zIndex={2000}
+                    >
+                      <MenuItem icon={<FiUser />}>Profile</MenuItem>
+                      <MenuItem
+                        icon={<FaRegHeart />}
+                        onClick={() => handleNav("/favorites")}
+                      >
+                        My Favorites
+                      </MenuItem>
+                      <MenuItem
+                        icon={<FiSettings />}
+                        onClick={handleSwitchRole}
+                      >
+                        Settings
+                      </MenuItem>
+                      {user.role !== "superadmin" && (
+                        <MenuItem
+                          icon={<FiRepeat />}
+                          onClick={handleSwitchRole}
+                        >
+                          Switch Role
+                        </MenuItem>
+                      )}
+                      <MenuDivider />
+                      <MenuItem
+                        icon={<FiLogOut />}
+                        color="red.500"
+                        onClick={logout}
+                      >
+                        Logout
+                      </MenuItem>
+                    </MotionMenuList>
+                  </Menu>
+                </>
+              )}
+
+              {!user && (
+                <>
+                  <NavLink to="/login" scrolled={!isHeroMode}>
+                    Login
+                  </NavLink>
+                  <NavLink to="/register" scrolled={!isHeroMode}>
+                    Register
+                  </NavLink>
+                </>
+              )}
+            </HStack>
+
+            {/* Mobile Menu Icon */}
+            <IconButton
+              display={{ base: "flex", md: "none" }}
+              onClick={isOpen ? onClose : onOpen}
+              icon={isOpen ? <HiX size={24} /> : <HiMenu size={24} />}
+              aria-label="Toggle Menu"
+              variant="ghost"
+              color={iconFg}
+              _hover={{
+                bg: isHeroMode ? "whiteAlpha.200" : "gray.100",
+              }}
+            />
+          </Flex>
+
+          {/* Mobile Menu Items */}
+          <AnimatePresence>
+            {isOpen && (
+              <MotionVStack
+                spacing={4}
+                bg="gray.50"
+                p={4}
+                rounded="md"
+                mt={3}
+                shadow="md"
+                display={{ base: "flex", md: "none" }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+              >
+                <Button w="full" variant="ghost" onClick={() => handleNav("/")}>
+                  Home
+                </Button>
+                <Button
+                  w="full"
+                  variant="ghost"
+                  onClick={() => handleNav("/blogs")}
+                >
+                  Blogs
+                </Button>
+                <Button
+                  leftIcon={<FaHeart />}
+                  colorScheme="pink"
+                  onClick={() => handleNav("/favorites")}
+                >
+                  My Favorites
+                </Button>
+                {user ? (
+                  <>
                     <Button
                       w="full"
                       variant="ghost"
-                      onClick={() => handleNav("/superadmin")}
+                      onClick={() => handleNav("/create")}
                     >
-                      Superadmin
+                      Create
                     </Button>
-                  )}
-                  <Button
-                    w="full"
-                    colorScheme="red"
-                    size="sm"
-                    onClick={() => {
-                      logout();
-                      onClose();
-                    }}
-                  >
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    w="full"
-                    variant="ghost"
-                    onClick={() => handleNav("/login")}
-                  >
-                    Login
-                  </Button>
-                  <Button
-                    w="full"
-                    variant="ghost"
-                    onClick={() => handleNav("/register")}
-                  >
-                    Register
-                  </Button>
-                </>
-              )}
-            </MotionVStack>
-          )}
-        </AnimatePresence>
-      </Container>
+                    {user.role === "admin" && (
+                      <Button
+                        w="full"
+                        variant="ghost"
+                        onClick={() => handleNav("/admin")}
+                      >
+                        Admin
+                      </Button>
+                    )}
+                    {user.role === "superadmin" && (
+                      <Button
+                        w="full"
+                        variant="ghost"
+                        onClick={() => handleNav("/superadmin")}
+                      >
+                        Superadmin
+                      </Button>
+                    )}
+                    <Button
+                      w="full"
+                      colorScheme="red"
+                      size="sm"
+                      onClick={() => {
+                        logout();
+                        onClose();
+                      }}
+                    >
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      w="full"
+                      variant="ghost"
+                      onClick={() => handleNav("/login")}
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      w="full"
+                      variant="ghost"
+                      onClick={() => handleNav("/register")}
+                    >
+                      Register
+                    </Button>
+                  </>
+                )}
+              </MotionVStack>
+            )}
+          </AnimatePresence>
+        </Container>
+      </MotionBox>
     </Box>
   );
 };
 
-const NavLink = ({ to, children, color = "gray.800" }) => (
+/* NavLink: ใช้สีจาก scrolled flag (ถ้า true = โหมด compact / ตัวเข้ม) */
+const NavLink = ({ to, children, scrolled }) => (
   <Text
     as={Link}
     to={to}
-    position="relative"
-    px={2}
-    py={1}
     fontWeight="500"
     fontSize="md"
-    color={color}
+    color={scrolled ? "gray.800" : "white"}
     transition="all 0.3s ease"
-    _before={{
-      content: `""`,
-      position: "absolute",
-      bottom: 0,
-      left: 2,
-      width: "0%",
-      height: "2px",
-      bgGradient: "linear(to-r, blue.400, teal.400)",
-      borderRadius: "full",
-      transition: "width 0.3s ease-in-out",
-    }}
     _hover={{
-      color: "teal.500",
+      color: scrolled ? "blue.500" : "teal.300",
       transform: "scale(1.04)",
-      _before: { width: "80%" },
     }}
   >
     {children}

@@ -16,6 +16,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 
+
 export default function LoginForm() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
@@ -34,15 +35,19 @@ export default function LoginForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     const res = await login(form.email, form.password);
 
-    
-     if (res.success) {
-      navigate("/dashboard");
+    if (res.success) {
+      if (res.user?.role === "admin" || res.user?.role === "superadmin") {
+        navigate("/dashboard");
+      } else {
+        navigate("/");
+      }
     } else if (res.requireVerification) {
       toast({
         title: "OTP Required",
@@ -52,14 +57,15 @@ export default function LoginForm() {
         isClosable: true,
       });
 
-      // 👉 Redirect to VerifyOTP page (ถ้ามีหน้ารอ OTP ยืนยัน)
-      navigate("/verify-otp", {
-        state: {
-          email: form.email,
-        },
-      });
+      navigate("/verify-otp", { state: { email: form.email } });
     } else {
-      navigate("/");
+      toast({
+        title: "Login Failed",
+        description: res.message || "Invalid credentials",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -73,8 +79,9 @@ export default function LoginForm() {
       boxShadow="lg"
       borderRadius="md"
     >
+     
       <Heading size="lg" mb={6} textAlign="center">
-        Welcome Back
+        Welcome 
       </Heading>
 
       {error && (
