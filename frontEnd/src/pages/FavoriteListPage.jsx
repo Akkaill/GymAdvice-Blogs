@@ -1,4 +1,3 @@
-// src/pages/FavoriteListPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import {
   Box,
@@ -18,14 +17,6 @@ import { useBlogStore } from "@/store/blog";
 import { useAuthStore } from "@/store/auth";
 import BlogCard from "@/components/BlogCard";
 
-/**
- * Premium Favorites Page
- * - แยก state loading สำหรับหน้านี้ (กันกะ global loading ของ blog store)
- * - ดึง favoriteBlogs เมื่อ user เปลี่ยน หรือหน้าเปิดครั้งแรก
- * - Spacing ด้านบน pt="28" กัน Navbar glass ทับ
- * - Empty state สวย ๆ พร้อมปุ่มไป Browse Blogs
- * - Debug console & toast error (ช่วยตอนแก้ API)
- */
 export default function FavoriteListPage() {
   const { favoriteBlogs, fetchFavoriteBlogs } = useBlogStore();
   const { user, isAuthenticated } = useAuthStore();
@@ -43,7 +34,7 @@ export default function FavoriteListPage() {
       try {
         await fetchFavoriteBlogs();
       } catch (err) {
-        console.error("❌ fetchFavoriteBlogs failed:", err);
+        console.error(" fetchFavoriteBlogs failed:", err);
         toast({
           title: "Failed to load favorites",
           status: "error",
@@ -63,7 +54,6 @@ export default function FavoriteListPage() {
     [favoriteBlogs]
   );
 
-  /* ---------- UI States ---------- */
   if (!isAuthenticated || !userId) {
     return (
       <Box pt="28" maxW="720px" mx="auto" textAlign="center">
@@ -103,7 +93,7 @@ export default function FavoriteListPage() {
     );
   }
 
-  /* ---------- Favorites Grid ---------- */
+
   return (
     <Box pt="28" px={{ base: 4, md: 8 }} maxW="1280px" mx="auto">
       <Heading mb={6} size="lg">
