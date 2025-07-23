@@ -11,6 +11,7 @@ export const MainLayout = () => {
   const hideNavbar =
     path === "/login" ||
     path === "/register" ||
+    path === "/dashboard" ||
     path === "/unauthorized" ||
     path.includes("notfound");
   const isHome = path === "/";

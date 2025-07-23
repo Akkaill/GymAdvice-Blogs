@@ -1,21 +1,25 @@
 import { create } from "zustand";
-import axios from "../utils/axios"; //ใช้ instance ที่มี Interceptor
+import axios from "../utils/axios";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export const useAuthStore = create((set, get) => ({
   user: null,
-  token: localStorage.getItem("token") || null,
+  token: null,
   loading: false,
   error: null,
   isUserReady: false,
-  isAuthenticated: !!localStorage.getItem("token"),
+  isAuthenticated: false,
 
-  setUser: (user) => set({ user }),
+  setUser: (user) =>
+    set({
+      user,
+      isAuthenticated: !!user,
+    }),
+
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
 
-  // Register (2 ขั้นตอน)
   register: async ({ email, password, phone, username }) => {
     set({ loading: true, error: null });
     try {
@@ -28,6 +32,7 @@ export const useAuthStore = create((set, get) => ({
       return res.data;
     } catch (err) {
       set({ error: err.response?.data?.message || "Registration failed" });
+      return { success: false };
     } finally {
       set({ loading: false });
     }
@@ -44,12 +49,12 @@ export const useAuthStore = create((set, get) => ({
       return res.data;
     } catch (err) {
       set({ error: err.response?.data?.message || "OTP verification failed" });
+      return { success: false };
     } finally {
       set({ loading: false });
     }
   },
 
-  // Login
   login: async (email, password) => {
     set({ loading: true, error: null });
     try {
@@ -61,9 +66,15 @@ export const useAuthStore = create((set, get) => ({
 
       const { accessToken, user } = res.data;
 
-      localStorage.setItem("token", accessToken);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-      set({ user, token: accessToken });
+      if (accessToken) {
+        axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+      }
+
+      set({
+        user,
+        token: accessToken,
+        isAuthenticated: true,
+      });
 
       return { success: true };
     } catch (err) {
@@ -79,33 +90,29 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Fetch User + Auto Refresh if needed
-
   fetchUser: async () => {
     try {
-      const res = await axios.get("/users/me", {
-        withCredentials: true,
-        headers: {
-          Authorization: `Bearer ${get().token}`,
-        },
+      const res = await axios.get("/users/me", { withCredentials: true });
+      const user = res.data?.user || null;
+      set({
+        user,
+        isUserReady: true,
+        isAuthenticated: !!user,
       });
-
-      set({ user: res.data.user, isUserReady: true, isAuthenticated: true });
-      return res.data.user;
+      return user;
     } catch (err) {
       console.error(
-        "❌ Fetch user failed:",
+        "Fetch user failed:",
         err.response?.data?.message || err.message
       );
-      // ถ้า token หมดอายุ → ลอง refresh token
+      // ลอง refresh แล้วดึงใหม่
       const newToken = await get().refreshToken();
       if (newToken) return await get().fetchUser();
-      set({ isUserReady: true, isAuthenticated: false });
+      set({ isUserReady: true, isAuthenticated: false, user: null });
       return null;
     }
   },
 
-  // Refresh Token
   refreshToken: async () => {
     try {
       const res = await axios.post(
@@ -113,12 +120,10 @@ export const useAuthStore = create((set, get) => ({
         {},
         { withCredentials: true }
       );
-      const accessToken = res.data.accessToken;
+      const accessToken = res.data?.accessToken;
       if (accessToken) {
-        get().setToken(accessToken);
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${accessToken}`;
+        axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+        set({ token: accessToken, isAuthenticated: true });
         return accessToken;
       }
       return null;
@@ -128,40 +133,39 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Logout
   logout: async () => {
-  try {
-    await axios.post(`${API}/users/logout`, {}, { withCredentials: true });
-  } catch (err) {
-    if (err.response?.status !== 401) {
+    try {
+      await axios.post(`${API}/users/logout`, {}, { withCredentials: true });
+    } catch (err) {
       console.warn("Logout API error:", err.message);
+    } finally {
+      // ล้าง header + state
+      delete axios.defaults.headers.common["Authorization"];
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isUserReady: true,
+      });
     }
-  } finally {
-    localStorage.removeItem("token");
-    delete axios.defaults.headers.common["Authorization"];
-    set({ user: null, token: null });
-  }
-}
-,
+  },
 
-  // Update Password
   updatePassword: async (userId, username, password) => {
     set({ loading: true });
     try {
-      const res = await axios.put(
-        `${API}/users/update-password/${userId}`,
-        { username, password },
-        { headers: { Authorization: `Bearer ${get().token}` } }
-      );
+      const res = await axios.put(`${API}/users/update-password/${userId}`, {
+        username,
+        password,
+      });
       return res.data;
     } catch (err) {
       set({ error: err.response?.data?.message || "Password update failed" });
+      return { success: false };
     } finally {
       set({ loading: false });
     }
   },
 
-  // Resend OTP
   resendOTP: async (userId) => {
     set({ loading: true, error: null });
     try {
@@ -175,7 +179,8 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Check Duplicate (email, username, phone)
+  // ตรวจซ้ำ (email, username, phone)
+
   checkDuplicate: async (payload) => {
     try {
       const res = await axios.post(`${API}/users/check-duplicate`, payload);
@@ -190,12 +195,14 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Set Token (ใช้งานได้เวลา refresh หรือหลัง login)
   setToken: (token) => {
-    localStorage.setItem("token", token);
-    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
     set({ token, isAuthenticated: true });
   },
 
-  setAccessToken: (token) => set({ accessToken: token }),
+  setAccessToken: (token) =>
+    set({
+      token,
+      isAuthenticated: !!token,
+    }),
 }));

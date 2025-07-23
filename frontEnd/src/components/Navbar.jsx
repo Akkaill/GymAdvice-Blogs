@@ -29,7 +29,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/auth";
 import { useNotificationStore } from "../store/notificationStore";
 
-/* Motion wrappers */
+
 const MotionBox = motion.create(Box);
 const MotionMenuList = motion.create(MenuList);
 const MotionVStack = motion.create(VStack);
@@ -220,6 +220,7 @@ const Navbar = () => {
                       _hover={{ bg: "transparent" }}
                       _active={{ bg: "transparent" }}
                       transition="all 0.25s ease-in-out"
+                       className="min-w-[120px] text-left"
                     >
                       <Avatar size="sm" name={user.username} />
                     </MenuButton>
@@ -396,7 +397,7 @@ const Navbar = () => {
   );
 };
 
-/* NavLink: ใช้สีจาก scrolled flag (ถ้า true = โหมด compact / ตัวเข้ม) */
+
 const NavLink = ({ to, children, scrolled }) => (
   <Text
     as={Link}
