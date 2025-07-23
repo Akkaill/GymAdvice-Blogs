@@ -26,6 +26,15 @@ const createRefreshToken = (user) => {
   );
 };
 
+const sendRefreshCookie = (res, token) => {
+  res.cookie("jid", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+};
+
 // ดึงผู้ใช้ทั้งหมด (admin only)
 export const getAllUsers = async (req, res) => {
   try {
@@ -114,10 +123,11 @@ export const verifyRegister = async (req, res) => {
       userId: newUser._id,
     });
   } catch (err) {
-    console.error("❌ User creation failed:", err);
+    console.error(" User creation failed:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 
 export const login = async (req, res) => {
   const { email, password, phone, otp } = req.body;
@@ -213,51 +223,40 @@ export const login = async (req, res) => {
 
   const accessToken = createAccessToken(user);
   const refreshToken = createRefreshToken(user);
+  sendRefreshCookie(res, refreshToken);
 
-  // ทำการเซ็ทคุกกี้ เป็น refreshToken เพื่อยืดระยะเวลาจากการที่เเยก accessToken กับ refreshToken,
-  res.cookie("jid", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
+  
   return res.json({
     success: true,
     accessToken,
     user: {
-      id: user._id,
+      _id: user._id,
       username: user.username,
       role: user.role,
     },
   });
 };
 
-// 🔁 Refresh Token endpoint
 export const refreshToken = async (req, res) => {
   const token = req.cookies.jid;
-  if (!token)
+  if (!token) {
     return res
       .status(401)
       .json({ success: false, message: "No refresh token" });
+  }
 
   try {
     const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     const user = await User.findById(payload.id);
-    if (!user || user.tokenVersion !== payload.tokenVersion)
+    if (!user || user.tokenVersion !== payload.tokenVersion) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid refresh token" });
+    }
 
     const accessToken = createAccessToken(user);
-    const refreshToken = createRefreshToken(user);
-
-    res.cookie("jid", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    const newRefreshToken = createRefreshToken(user);
+    sendRefreshCookie(res, newRefreshToken);
 
     return res.json({ success: true, accessToken });
   } catch (err) {
@@ -268,46 +267,39 @@ export const refreshToken = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ success: false, message: "No token" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
-
-    if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, message: "User not found" });
-    }
-
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        username: user.username,
-        role: user.role,
-      },
-    });
-  } catch (err) {
-    res.status(401).json({ success: false, message: "Invalid token" });
+  const user = req.user; // จาก protect
+  if (!user) {
+    return res
+      .status(401)
+      .json({ success: false, message: "No user session" });
   }
+
+  return res.json({
+    success: true,
+    user: {
+      _id: user._id,
+      username: user.username,
+      role: user.role,
+    },
+  });
 };
 
 export const logout = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    user.tokenVersion += 1;
-    await user.save();
-    await createLog("Logout", req.user._id, "User logged out");
-    res.clearCookie("jid");
-    return res.json({ success: true, message: "Logged out successfully" });
+    if (user) {
+      user.tokenVersion += 1; // revoke tokens
+      await user.save();
+      await createLog("Logout", req.user._id, "User logged out");
+    }
   } catch (err) {
     console.error("Logout Error:", err.message);
-    res.status(500).json({ success: false, message: "Logout failed" });
+    // continue
+  } finally {
+    res.clearCookie("jid");
   }
+
+  return res.json({ success: true, message: "Logged out successfully" });
 };
 
 export const updateUserPassword = async (req, res) => {

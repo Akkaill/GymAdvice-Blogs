@@ -1,7 +1,6 @@
 import Blog from "../models/blogs.model.js";
 import mongoose from "mongoose";
 
-
 export const getBlogs = async (req, res) => {
   try {
     // ค่าที่ใช้ในการควบคุมการ paginate / filter / sort
@@ -43,7 +42,13 @@ export const getBlogs = async (req, res) => {
     // ดึงข้อมูลเกินมา 1 ชิ้น เพื่อเช็คว่ายังมีต่อหรือไม่
     const results = await Blog.find(filter)
       .sort({ [sortBy]: order })
-      .limit(limit + 1);
+      .limit(limit + 1)
+      .populate({
+        path: "favoritedBy",
+        select: "_id",
+        options: { lean: true },
+      }) // 
+      .lean(); 
     // ตรวจสอบว่าเรามี "หน้าใหม่" หรือไม่
     const hasMore = results.length > limit;
 
@@ -74,7 +79,13 @@ export const getBlogs = async (req, res) => {
 export const getBlogById = async (req, res) => {
   const { id } = req.params;
   try {
-    const blog = await Blog.findById(id);
+    const blog = await Blog.findById(id)
+      .populate({
+        path: "favoritedBy",
+        select: "_id",
+        options: { lean: true },
+      }) // ✅ lean ใน populate
+      .lean(); // ✅ หลัง populate เท่านั้น
     if (!blog) {
       return res
         .status(404)
@@ -125,18 +136,25 @@ export const createBlog = async (req, res) => {
 };
 
 export const updateBlog = async (req, res) => {
-  const { id } = req.params;
-  const blog = req.body;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(404).json({ success: false, message: "InvalidId" });
+  const blogId = req.params.id;
+  const updates = req.body;
+
+  const blog = await Blog.findById(blogId);
+  if (!blog)
+    return res.status(404).json({ success: false, message: "Blog not found" });
+
+  // ตรวจว่าเป็นเจ้าของ หรือ admin
+  if (
+    !blog.createdBy.equals(req.user._id) &&
+    !["admin", "superadmin"].includes(req.user.role)
+  ) {
+    return res.status(403).json({ success: false, message: "Unauthorized" });
   }
 
-  try {
-    const updateBlog = await Blog.findByIdAndUpdate(id, blog, { new: true });
-    res.status(200).json({ success: true, data: updateBlog });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Server error to Update" });
-  }
+  Object.assign(blog, updates);
+  await blog.save();
+
+  res.json({ success: true, data: blog });
 };
 
 export const deleteBlog = async (req, res) => {
@@ -152,3 +170,74 @@ export const deleteBlog = async (req, res) => {
   }
   console.log("deleted", id);
 };
+
+export const toggleFavorite = async (req, res) => {
+  const blogId = req.params.id;
+
+  // ✅ เช็กว่า ID ถูกต้อง
+  if (!mongoose.Types.ObjectId.isValid(blogId)) {
+    return res.status(400).json({ success: false, message: "Invalid blog ID" });
+  }
+
+  // ✅ เช็กว่า user login จริง
+  if (!req.user || !req.user._id) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Unauthorized: missing user" });
+  }
+
+  const blog = await Blog.findById(blogId);
+  if (!blog) {
+    return res.status(404).json({ success: false, message: "Blog not found" });
+  }
+
+  const userId = req.user._id;
+  if (!Array.isArray(blog.favoritedBy)) blog.favoritedBy = [];
+
+  const index = blog.favoritedBy.findIndex((id) => id.equals(userId));
+
+  if (index === -1) {
+    blog.favoritedBy.push(userId);
+  } else {
+    blog.favoritedBy.splice(index, 1);
+  }
+  blog.updatedAt = new Date();
+  await blog.save();
+  const updatedBlog = await Blog.findById(blogId)
+    .populate({ path: "favoritedBy", select: "_id" })
+    .lean();
+  res.json({ success: true, data: updatedBlog });
+};
+
+export const getTopBlogs = async (req, res) => {
+  const blogs = await Blog.find()
+    .populate("author", "username")
+    .sort({
+      "favoritedBy.length": -1,
+      "likes.length": -1,
+      "comments.length": -1,
+    })
+    .limit(5);
+
+  res.json({ success: true, blogs });
+};
+
+export const getFavoriteBlogs = async (req, res) => {
+  try {
+    console.log("🔐 USER FROM TOKEN:", req.user); // ตรวจว่ามี user ไหม
+    const userId = req.user._id;
+
+    const blogs = await Blog.find({ favoritedBy: userId })
+      .populate({ path: "favoritedBy", select: "_id", options: { lean: true } })
+      .lean();
+
+    res.status(200).json({ success: true, data: blogs });
+  } catch (err) {
+    console.error("Error in getFavoriteBlogs:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch favorite blogs",
+    });
+  }
+};
+

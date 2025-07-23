@@ -4,8 +4,9 @@ import Log from "../models/log.model.js";
 
 export const getDashboardStats = async (req, res) => {
   try {
-    const userCount = await User.countDocuments();
+    const userCount = await User.countDocuments({ role: "user" });
     const adminCount = await User.countDocuments({ role: "admin" });
+    const superadmin = await User.countDocuments({ role: "superadmin" });
     const blogCount = await Blog.countDocuments();
     const logCount = await Log.countDocuments();
 
@@ -14,6 +15,7 @@ export const getDashboardStats = async (req, res) => {
       message: {
         users: userCount,
         admins: adminCount,
+        superadmin: superadmin,
         blogs: blogCount,
         logs: logCount,
       },
@@ -34,6 +36,8 @@ export const getRecentLogs = async (req, res) => {
 
     res.json({ success: true, data: logs });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server Error", error: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server Error", error: err.message });
   }
 };

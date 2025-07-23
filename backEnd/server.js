@@ -8,11 +8,12 @@ import logRoutes from "./routes/log.route.js";
 import superadminRoutes from "./routes/superadmin.route.js";
 import securityRoutes from "./routes/security.route.js";
 import dashboardRoutes from "./routes/dashboard.route.js";
-import notificationRoutes from "./routes/notification.route.js"
+import notificationRoutes from "./routes/notification.route.js";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { createLog } from "./utils/log.js";
-import cors from "cors"
+import cors from "cors";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 const limiter = rateLimit({
@@ -22,10 +23,14 @@ const limiter = rateLimit({
 });
 const app = express();
 const PORT = process.env.PORT || 5000;
-app.use(cors({
-  origin:"http://localhost:5173",
-  credentials:true
-}))
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+app.use(cookieParser());
 app.use(express.json());
 app.use(helmet());
 app.use("/api/", limiter);
@@ -43,7 +48,6 @@ app.use((err, req, res, next) => {
   createLog("server_Error", req.user?._id || null, err.message);
   res.status(500).json({ success: false, message: "Internal Server Error" });
 });
-
 
 app.listen(PORT, "::", () => {
   connectDB();

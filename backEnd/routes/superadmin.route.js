@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  getAllUsers,
   updateUserRole,
   deleteUser,
   createAdmin,
@@ -12,7 +13,8 @@ const router = express.Router();
 
 router.use(protect, isSuperAdmin);
 
-router.get("/superadmin-only", protect, someAdminController);
+router.get("/superadmin-only", someAdminController);
+router.get("/get-users", getAllUsers);
 router.put("/update-role/:userId", updateUserRole);
 router.delete("/delete-user/:userId", deleteUser);
 router.post("/create-admin", createAdmin);
