@@ -9,11 +9,14 @@ import superadminRoutes from "./routes/superadmin.route.js";
 import securityRoutes from "./routes/security.route.js";
 import dashboardRoutes from "./routes/dashboard.route.js";
 import notificationRoutes from "./routes/notification.route.js";
+import commentRoutes from './routes/comment.route.js';
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { createLog } from "./utils/log.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+
+
 
 dotenv.config();
 const limiter = rateLimit({
@@ -42,7 +45,10 @@ app.use("/api/logs", logRoutes);
 app.use("/api/superadmin", superadminRoutes);
 app.use("/api/security", securityRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use('/api/comments', commentRoutes);
 app.use("/api/noti", notificationRoutes);
+
+
 app.use((err, req, res, next) => {
   console.log(err.stack);
   createLog("server_Error", req.user?._id || null, err.message);

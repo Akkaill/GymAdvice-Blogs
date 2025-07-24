@@ -6,6 +6,7 @@ import {
   createAdmin,
   revoke,
 } from "../controllers/superadmin.controller.js";
+import { deleteComment } from "../controllers/comment.controller.js";
 import { isSuperAdmin, protect } from "../middleware/authMiddleware.js";
 import { someAdminController } from "../controllers/admin.controller.js";
 
@@ -17,6 +18,7 @@ router.get("/superadmin-only", someAdminController);
 router.get("/get-users", getAllUsers);
 router.put("/update-role/:userId", updateUserRole);
 router.delete("/delete-user/:userId", deleteUser);
+router.delete("/delete-comment/:commentId", deleteComment);
 router.post("/create-admin", createAdmin);
 router.post("/revoke/:userId", revoke);
 

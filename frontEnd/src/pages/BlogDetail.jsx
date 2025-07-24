@@ -12,6 +12,11 @@ import {
 import { IoIosAlert } from "react-icons/io";
 import { useParams } from "react-router-dom";
 import { useBlogStore } from "@/store/blog";
+import {CommentSection} from "@/components/CommentSection";
+
+
+
+
 
 export const BlogDetail = () => {
   const { id } = useParams();
@@ -82,6 +87,10 @@ export const BlogDetail = () => {
         <Text fontSize="sm" color="gray.500">
           Created At: {new Date(blog.createdAt).toLocaleString()}
         </Text>
+        <Box width={'full'}>
+
+        <CommentSection blogId={blog._id} />
+        </Box>
       </VStack>
     </Container>
   );

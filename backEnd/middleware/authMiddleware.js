@@ -1,6 +1,24 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import rateLimit from "express-rate-limit";
+import Comment from "../models/comment.model.js";
+
+export const isCommentOwner = async (req, res, next) => {
+  try {
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) {
+      return res.status(404).json({ success: false, message: "Comment not found" });
+    }
+
+    if (comment.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 
 export const protect = async (req, res, next) => {

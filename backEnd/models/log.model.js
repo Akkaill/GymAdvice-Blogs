@@ -6,7 +6,7 @@ const logSchema = new mongoose.Schema(
     performedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     details: String,
   },
-  { timestamps: true } // ✅ creates createdAt and updatedAt
+  { timestamps: true } 
 );
 
 const Log = mongoose.model("Log", logSchema);

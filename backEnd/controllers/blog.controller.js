@@ -210,17 +210,49 @@ export const toggleFavorite = async (req, res) => {
 };
 
 export const getTopBlogs = async (req, res) => {
-  const blogs = await Blog.find()
-    .populate("author", "username")
-    .sort({
-      "favoritedBy.length": -1,
-      "likes.length": -1,
-      "comments.length": -1,
-    })
-    .limit(5);
+  try {
+    const topBlogs = await Blog.aggregate([
+      {
+        $addFields: {
+          favoriteCount: { $size: { $ifNull: ["$favoritedBy", []] } },
+        },
+      },
+      {
+        $sort: { favoriteCount: -1, createdAt: -1 },
+      },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "users", // ชื่อตารางใน DB ต้องตรง
+          localField: "user",
+          foreignField: "_id",
+          as: "author",
+        },
+      },
+      {
+        $unwind: "$author",
+      },
+      {
+        $project: {
+          title: 1,
+          subtitle: 1,
+          description: 1,
+          image: 1,
+          createdAt: 1,
+          favoritedBy: 1,
+          favoriteCount: 1,
+          author: { _id: "$author._id", username: "$author.username" },
+        },
+      },
+    ]);
 
-  res.json({ success: true, blogs });
+    res.json({ success: true, blogs: topBlogs });
+  } catch (err) {
+    console.error("Error in getTopBlogs:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch top blogs" });
+  }
 };
+
 
 export const getFavoriteBlogs = async (req, res) => {
   try {
