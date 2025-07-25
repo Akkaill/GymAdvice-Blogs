@@ -23,12 +23,18 @@ import { FaHeart } from "react-icons/fa";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { CiSquarePlus } from "react-icons/ci";
 import { HiMenu, HiX } from "react-icons/hi";
-import { FiBell, FiSettings, FiRepeat, FiLogOut, FiUser } from "react-icons/fi";
+import {
+  FiBell,
+  FiSettings,
+  FiRepeat,
+  FiLogOut,
+  FiUser,
+  FiBarChart2,
+} from "react-icons/fi";
 import { FaRegHeart } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/auth";
 import { useNotificationStore } from "../store/notificationStore";
-
 
 const MotionBox = motion.create(Box);
 const MotionMenuList = motion.create(MenuList);
@@ -146,16 +152,6 @@ const Navbar = () => {
                       bg: isHeroMode ? "whiteAlpha.200" : "gray.100",
                     }}
                   />
-                  {user.role === "admin" && (
-                    <NavLink to="/admin" scrolled={!isHeroMode}>
-                      Admin
-                    </NavLink>
-                  )}
-                  {user.role === "superadmin" && (
-                    <NavLink to="/superadmin" scrolled={!isHeroMode}>
-                      Superadmin
-                    </NavLink>
-                  )}
 
                   {/* Notifications */}
                   <Menu>
@@ -220,7 +216,7 @@ const Navbar = () => {
                       _hover={{ bg: "transparent" }}
                       _active={{ bg: "transparent" }}
                       transition="all 0.25s ease-in-out"
-                       className="min-w-[120px] text-left"
+                      className="min-w-[120px] text-left"
                     >
                       <Avatar size="sm" name={user.username} />
                     </MenuButton>
@@ -238,19 +234,29 @@ const Navbar = () => {
                       overflowY="auto"
                       zIndex={2000}
                     >
-                      <MenuItem icon={<FiUser />}>Profile</MenuItem>
+                      <MenuItem
+                        icon={<FiUser />}
+                        onClick={() => handleNav("/profile")}
+                      >
+                        Profile
+                      </MenuItem>
                       <MenuItem
                         icon={<FaRegHeart />}
                         onClick={() => handleNav("/favorites")}
                       >
                         My Favorites
                       </MenuItem>
-                      <MenuItem
-                        icon={<FiSettings />}
-                        onClick={handleSwitchRole}
-                      >
-                        Settings
-                      </MenuItem>
+                      {user.role === "admin" || "superadmin" ? (
+                        <MenuItem
+                          icon={<FiBarChart2 />}
+                          onClick={() => handleNav("/dashboard")}
+                        >
+                          Dashboard
+                        </MenuItem>
+                      ) : (
+                        ""
+                      )}
+
                       {user.role !== "superadmin" && (
                         <MenuItem
                           icon={<FiRepeat />}
@@ -324,15 +330,35 @@ const Navbar = () => {
                 >
                   Blogs
                 </Button>
-                <Button
-                  leftIcon={<FaHeart />}
-                  colorScheme="pink"
-                  onClick={() => handleNav("/favorites")}
-                >
-                  My Favorites
-                </Button>
+
+                {user.role === "admin" || "superadmin" ? (
+                  <Button
+                    icon={<FiBarChart2 />}
+                    onClick={() => handleNav("/dashboard")}
+                    w="full"
+                    variant="ghost"
+                  >
+                    Dashboard
+                  </Button>
+                ) : (
+                  ""
+                )}
                 {user ? (
                   <>
+                    <Button
+                      w="full"
+                      variant="ghost"
+                      onClick={() => handleNav("/profile")}
+                    >
+                      My Profile
+                    </Button>
+                    <Button
+                      w="full"
+                      variant="ghost"
+                      onClick={() => handleNav("/favorites")}
+                    >
+                      My Favorites
+                    </Button>
                     <Button
                       w="full"
                       variant="ghost"
@@ -340,24 +366,7 @@ const Navbar = () => {
                     >
                       Create
                     </Button>
-                    {user.role === "admin" && (
-                      <Button
-                        w="full"
-                        variant="ghost"
-                        onClick={() => handleNav("/admin")}
-                      >
-                        Admin
-                      </Button>
-                    )}
-                    {user.role === "superadmin" && (
-                      <Button
-                        w="full"
-                        variant="ghost"
-                        onClick={() => handleNav("/superadmin")}
-                      >
-                        Superadmin
-                      </Button>
-                    )}
+
                     <Button
                       w="full"
                       colorScheme="red"
@@ -396,7 +405,6 @@ const Navbar = () => {
     </Box>
   );
 };
-
 
 const NavLink = ({ to, children, scrolled }) => (
   <Text

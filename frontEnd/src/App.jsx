@@ -9,6 +9,7 @@ import { BlogDetail } from "./pages/BlogDetail";
 import { Toaster } from "sonner";
 import { AllBlogs } from "@/pages/Blogs";
 import { MainLayout } from "./components/MainLayout";
+import { ProfilePage } from "./pages/Profilepage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import Dashboard from "./pages/Dashboard";
@@ -90,6 +91,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/favorites" element={<FavoriteListPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFoundPage />} />

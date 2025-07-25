@@ -13,8 +13,11 @@ const userSchema = new mongoose.Schema(
     failedLoginAttempts: { type: Number, default: 0 },
     lockedUntil: { type: Date },
     tokenVersion: { type: Number, default: 0 },
+    avatar: {
+      url: String,
+      public_id: String,
+    },
 
-  
     email: { type: String, unique: true, required: true },
     phone: { type: String },
 

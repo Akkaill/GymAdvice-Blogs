@@ -3,6 +3,7 @@ import User from "../models/user.model.js";
 import rateLimit from "express-rate-limit";
 import Comment from "../models/comment.model.js";
 
+
 export const isCommentOwner = async (req, res, next) => {
   try {
     const comment = await Comment.findById(req.params.id);
@@ -88,3 +89,4 @@ export const otpRateLimit = rateLimit({
   max: 3,
   message: "Too many OTP requests, please try again later.",
 });
+

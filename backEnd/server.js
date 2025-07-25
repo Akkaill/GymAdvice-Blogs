@@ -10,6 +10,9 @@ import securityRoutes from "./routes/security.route.js";
 import dashboardRoutes from "./routes/dashboard.route.js";
 import notificationRoutes from "./routes/notification.route.js";
 import commentRoutes from './routes/comment.route.js';
+import profileRoutes from "./routes/profile.route.js";
+
+
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { createLog } from "./utils/log.js";
@@ -46,6 +49,7 @@ app.use("/api/superadmin", superadminRoutes);
 app.use("/api/security", securityRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use('/api/comments', commentRoutes);
+app.use("/api/profile", profileRoutes);
 app.use("/api/noti", notificationRoutes);
 
 
