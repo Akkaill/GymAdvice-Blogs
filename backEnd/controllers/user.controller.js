@@ -128,7 +128,6 @@ export const verifyRegister = async (req, res) => {
   }
 };
 
-
 export const login = async (req, res) => {
   const { email, password, phone, otp } = req.body;
   const user = await User.findOne({ email });
@@ -225,7 +224,6 @@ export const login = async (req, res) => {
   const refreshToken = createRefreshToken(user);
   sendRefreshCookie(res, refreshToken);
 
-  
   return res.json({
     success: true,
     accessToken,
@@ -269,9 +267,7 @@ export const refreshToken = async (req, res) => {
 export const getMe = async (req, res) => {
   const user = req.user; // จาก protect
   if (!user) {
-    return res
-      .status(401)
-      .json({ success: false, message: "No user session" });
+    return res.status(401).json({ success: false, message: "No user session" });
   }
 
   return res.json({
@@ -286,17 +282,24 @@ export const getMe = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    if (user) {
-      user.tokenVersion += 1; // revoke tokens
-      await user.save();
-      await createLog("Logout", req.user._id, "User logged out");
+    if (!req.user?._id) {
+      console.warn("No user found in request");
+    } else {
+      const user = await User.findById(req.user._id);
+      if (user) {
+        user.tokenVersion += 1; // revoke tokens
+        await user.save();
+        await createLog("Logout", req.user._id, "User logged out");
+      }
     }
   } catch (err) {
     console.error("Logout Error:", err.message);
-    // continue
   } finally {
-    res.clearCookie("jid");
+    res.clearCookie("jid", {
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: process.env.NODE_ENV === "production",
+    });
   }
 
   return res.json({ success: true, message: "Logged out successfully" });

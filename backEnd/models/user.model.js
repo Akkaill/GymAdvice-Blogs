@@ -17,6 +17,11 @@ const userSchema = new mongoose.Schema(
       url: String,
       public_id: String,
     },
+    instagram: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
 
     email: { type: String, unique: true, required: true },
     phone: { type: String },

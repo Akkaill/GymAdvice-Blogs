@@ -19,18 +19,11 @@ import {
   Spinner,
   useDisclosure,
 } from "@chakra-ui/react";
-import { FaHeart } from "react-icons/fa";
+
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { CiSquarePlus } from "react-icons/ci";
 import { HiMenu, HiX } from "react-icons/hi";
-import {
-  FiBell,
-  FiSettings,
-  FiRepeat,
-  FiLogOut,
-  FiUser,
-  FiBarChart2,
-} from "react-icons/fi";
+import { FiBell, FiLogOut, FiUser, FiBarChart2 } from "react-icons/fi";
 import { FaRegHeart } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/auth";
@@ -42,8 +35,8 @@ const MotionVStack = motion.create(VStack);
 
 const Navbar = () => {
   const { isOpen, onClose, onOpen } = useDisclosure();
-  const { user, logout } = useAuthStore();
-  const { notifications, unseenCount, fetchNotifications, markAsRead } =
+  const { user, logout, isUserReady, isAuthenticated } = useAuthStore(); // แก้ชื่อ isAuthenticated
+  const { notifications, unseenCount, fetchNotifications, markAsRead,loading } =
     useNotificationStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,8 +44,10 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (user) fetchNotifications();
-  }, [user]);
+    if (isUserReady && isAuthenticated) {
+      fetchNotifications();
+    }
+  }, [isUserReady, isAuthenticated]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -63,14 +58,9 @@ const Navbar = () => {
   const isHome = location.pathname === "/";
   const isHeroMode = isHome && !scrolled;
 
-  const handleSwitchRole = () => {
-    navigate("/settings");
-    onClose();
-  };
-
   const handleNav = (path) => {
     navigate(path);
-    onClose();
+    onClose(); // ปิด hamburger หลัง navigate
   };
 
   const fg = isHeroMode ? "white" : "gray.800";
@@ -113,7 +103,6 @@ const Navbar = () => {
       >
         <Container maxW="1140px" px={6} py={4}>
           <Flex justify="space-between" align="center">
-            {/* Logo */}
             <Text
               fontSize="2xl"
               fontWeight="bold"
@@ -185,8 +174,14 @@ const Navbar = () => {
                       zIndex={2000}
                     >
                       <MenuGroup title="Notifications">
-                        {notifications.length === 0 ? (
-                          <Spinner size="sm" />
+                        {notifications.length === 0 && loading ? (
+                          <Flex justify="center" p={3}>
+                            <Spinner size="sm" />
+                          </Flex>
+                        ) : notifications.length === 0 ? (
+                          <Text px={3} py={2} fontSize="sm" color="gray.500">
+                            No notifications
+                          </Text>
                         ) : (
                           notifications.map((n) => (
                             <MenuItem
@@ -218,7 +213,12 @@ const Navbar = () => {
                       transition="all 0.25s ease-in-out"
                       className="min-w-[120px] text-left"
                     >
-                      <Avatar size="sm" name={user.username} />
+                      <Avatar
+                        size="sm"
+                        src={user.avatar}
+                        border="1px solid #ccc"
+                        bg="gray.100"
+                      />
                     </MenuButton>
                     <MotionMenuList
                       initial={{ opacity: 0, scale: 0.95 }}
@@ -246,30 +246,25 @@ const Navbar = () => {
                       >
                         My Favorites
                       </MenuItem>
-                      {user.role === "admin" || "superadmin" ? (
+                      {/* ป้องกัน error ด้วย optional chaining && เงื่อนไขให้แสดงถูกต้อง */}
+                      {(user?.role === "admin" ||
+                        user?.role === "superadmin") && (
                         <MenuItem
                           icon={<FiBarChart2 />}
                           onClick={() => handleNav("/dashboard")}
                         >
                           Dashboard
                         </MenuItem>
-                      ) : (
-                        ""
                       )}
 
-                      {user.role !== "superadmin" && (
-                        <MenuItem
-                          icon={<FiRepeat />}
-                          onClick={handleSwitchRole}
-                        >
-                          Switch Role
-                        </MenuItem>
-                      )}
                       <MenuDivider />
                       <MenuItem
                         icon={<FiLogOut />}
                         color="red.500"
-                        onClick={logout}
+                        onClick={() => {
+                          logout();
+                          onClose(); // ปิด hamburger หากเปิดอยู่
+                        }}
                       >
                         Logout
                       </MenuItem>
@@ -278,7 +273,7 @@ const Navbar = () => {
                 </>
               )}
 
-              {!user && (
+              {!user && !isAuthenticated && (
                 <>
                   <NavLink to="/login" scrolled={!isHeroMode}>
                     Login
@@ -331,18 +326,16 @@ const Navbar = () => {
                   Blogs
                 </Button>
 
-                {user.role === "admin" || "superadmin" ? (
+                {(user?.role === "admin" || user?.role === "superadmin") && (
                   <Button
-                    icon={<FiBarChart2 />}
-                    onClick={() => handleNav("/dashboard")}
                     w="full"
+                    onClick={() => handleNav("/dashboard")}
                     variant="ghost"
                   >
                     Dashboard
                   </Button>
-                ) : (
-                  ""
                 )}
+
                 {user ? (
                   <>
                     <Button

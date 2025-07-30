@@ -22,7 +22,7 @@ export const useNotificationStore = create((set, get) => ({
         loading: false,
       });
     } catch (err) {
-      console.error("Failed to fetch notifications", err);
+      console.error("❌ Failed to fetch notifications:", err?.response?.data || err.message);
       set({ loading: false });
     }
   },

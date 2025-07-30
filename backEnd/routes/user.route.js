@@ -26,7 +26,7 @@ const router = express.Router();
 router.post("/pre-register", preRegister);
 router.post("/verify-register", verifyRegister);
 router.post("/login", login);
-router.post("/logout", protect, logout);
+router.post("/logout", logout);
 router.post("/refresh-token", refreshToken);
 router.post("/resend-otp", otpRateLimit, resendOTP);
 router.post("/resend-temp-otp", resendTempOTP);

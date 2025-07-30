@@ -19,7 +19,11 @@ const blogsSchema = new mongoose.Schema(
       required: true,
     },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    authorName: { type: String },
+    authorName: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     favoritedBy: [
       { type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] },
     ],

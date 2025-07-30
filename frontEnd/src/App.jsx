@@ -1,4 +1,3 @@
-// src/App.jsx
 import { useEffect } from "react";
 import { useAuthStore } from "./store/auth";
 import { Box, Flex, Spinner, Text } from "@chakra-ui/react";
@@ -18,44 +17,68 @@ import NotFoundPage from "./pages/Authorization/์NotfoundPage";
 import FavoriteListPage from "./pages/FavoriteListPage";
 
 function App() {
-  const { fetchUser, isUserReady, refreshToken, isAuthenticated, user } =
-    useAuthStore();
+  const {
+    fetchUser,
+    isUserReady,
+    hasAttemptedAuth,
+    refreshToken,
+    isAuthenticated,
+    user,
+  } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-
 
   useEffect(() => {
     let cancelled = false;
 
     const initAuth = async () => {
       try {
-        const token = await refreshToken(); // cookie -> access
-        if (cancelled) return;
-        if (token) {
-          await fetchUser(); // fetch profile
-        } else {
-          // ไม่มี refresh token / หมดอายุ
-          useAuthStore.getState().logout();
+        // เช็ค localStorage ก่อนเรียก refreshToken
+        const hasRefreshTokenCookie =
+          localStorage.getItem("hasRefreshToken") === "true";
+
+        if (!hasRefreshTokenCookie) {
+          console.log("No refresh token in localStorage, skip refresh");
+          return null; // ข้ามเรียก refreshToken
         }
-      } catch (err) {
-        console.error("Auth init failed:", err);
+
+        const token = await refreshToken();
+        if (cancelled) return;
+
+        if (token) {
+          await fetchUser(); // ได้ token แล้ว ไปดึงข้อมูล user
+        } else {
+          // ✅ refreshToken fail (เช่น ยังไม่ได้ login) —> อย่า logout
+          console.warn("⚠️ No token from refresh — not logged in (normal)");
+        }
+      } catch (refreshErr) {
+        // ❌ ไม่ต้อง logout ที่นี่
+        console.error("❌ Refresh token failed:", refreshErr);
       } finally {
         if (!cancelled) {
-          useAuthStore.setState({ isUserReady: true });
+          useAuthStore.setState({
+            isUserReady: true,
+            hasAttemptedAuth: true,
+          });
         }
       }
     };
 
-    initAuth();
+    if (!hasAttemptedAuth) {
+      initAuth();
+    } else {
+      useAuthStore.setState({ isUserReady: true });
+    }
+
     return () => {
       cancelled = true;
     };
-  }, []); 
-
+  }, [hasAttemptedAuth]);
 
   useEffect(() => {
     if (!isUserReady) return;
     if (!isAuthenticated) return;
+
     const role = user?.role;
     if (location.pathname === "/login" || location.pathname === "/register") {
       if (role === "admin" || role === "superadmin") {
@@ -65,7 +88,6 @@ function App() {
       }
     }
   }, [isUserReady, isAuthenticated, user, location.pathname, navigate]);
-
 
   if (!isUserReady) {
     return (
@@ -92,6 +114,8 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+
           <Route path="/favorites" element={<FavoriteListPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFoundPage />} />

@@ -10,6 +10,8 @@ export const useAuthStore = create((set, get) => ({
   error: null,
   isUserReady: false,
   isAuthenticated: false,
+  isLoggingOut: false,
+  hasAttemptedAuth: false,
 
   setUser: (user) =>
     set({
@@ -69,7 +71,7 @@ export const useAuthStore = create((set, get) => ({
       if (accessToken) {
         axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
       }
-
+ localStorage.setItem("hasRefreshToken", "true");
       set({
         user,
         token: accessToken,
@@ -105,48 +107,62 @@ export const useAuthStore = create((set, get) => ({
         "Fetch user failed:",
         err.response?.data?.message || err.message
       );
-      // ลอง refresh แล้วดึงใหม่
-      const newToken = await get().refreshToken();
-      if (newToken) return await get().fetchUser();
+      // ไม่เรียก refreshToken อีก → axios interceptor จะดูแลให้
       set({ isUserReady: true, isAuthenticated: false, user: null });
       return null;
     }
   },
 
   refreshToken: async () => {
-    try {
-      const res = await axios.post(
-        `${API}/users/refresh-token`,
-        {},
-        { withCredentials: true }
-      );
-      const accessToken = res.data?.accessToken;
-      if (accessToken) {
-        axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-        set({ token: accessToken, isAuthenticated: true });
-        return accessToken;
-      }
-      return null;
-    } catch (err) {
-      console.error("Refresh Token Failed:", err.message);
-      return null;
+  try {
+    const res = await axios.post(
+      `${API}/users/refresh-token`,
+      {},
+      { withCredentials: true }
+    );
+
+    const accessToken = res.data?.accessToken;
+
+    if (accessToken) {
+      axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+      set({ token: accessToken, isAuthenticated: true });
+      return accessToken;
     }
-  },
+
+    // ⚠️ ไม่มี accessToken แปลว่า refresh ไม่สำเร็จ
+    set({ user: null, token: null, isAuthenticated: false });
+    delete axios.defaults.headers.common.Authorization;
+    return null;
+
+  } catch (err) {
+    // 🧠 แบบ soft-fail: ไม่ได้ถือว่า error รุนแรง ถ้ายังไม่มี jid
+    console.warn("🟠 refreshToken failed (may be no jid):", err.response?.data?.message || err.message);
+    set({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isUserReady: true, // สำคัญมาก! เพื่อให้หน้าหยุดหมุน
+      hasAttemptedAuth: true,
+    });
+    delete axios.defaults.headers.common.Authorization;
+    return null;
+  }
+},
 
   logout: async () => {
     try {
       await axios.post(`${API}/users/logout`, {}, { withCredentials: true });
+      localStorage.removeItem("hasRefreshToken");
     } catch (err) {
       console.warn("Logout API error:", err.message);
     } finally {
-      // ล้าง header + state
-      delete axios.defaults.headers.common["Authorization"];
       set({
         user: null,
         token: null,
         isAuthenticated: false,
         isUserReady: true,
       });
+      delete axios.defaults.headers.common.Authorization;
     }
   },
 

@@ -47,8 +47,8 @@ export const getBlogs = async (req, res) => {
         path: "favoritedBy",
         select: "_id",
         options: { lean: true },
-      }) // 
-      .lean(); 
+      }) //
+      .lean();
     // ตรวจสอบว่าเรามี "หน้าใหม่" หรือไม่
     const hasMore = results.length > limit;
 
@@ -80,12 +80,14 @@ export const getBlogById = async (req, res) => {
   const { id } = req.params;
   try {
     const blog = await Blog.findById(id)
+      .populate("authorName", "username _id") 
       .populate({
         path: "favoritedBy",
         select: "_id",
         options: { lean: true },
-      }) // ✅ lean ใน populate
-      .lean(); // ✅ หลัง populate เท่านั้น
+      })
+      .lean();
+
     if (!blog) {
       return res
         .status(404)
@@ -134,7 +136,6 @@ export const createBlog = async (req, res) => {
       .json({ success: false, message: "Server error: Failed to create blog" });
   }
 };
-
 export const updateBlog = async (req, res) => {
   const blogId = req.params.id;
   const updates = req.body;
@@ -145,7 +146,7 @@ export const updateBlog = async (req, res) => {
 
   // ตรวจว่าเป็นเจ้าของ หรือ admin
   if (
-    !blog.createdBy.equals(req.user._id) &&
+    !blog.user.equals(req.user._id) &&
     !["admin", "superadmin"].includes(req.user.role)
   ) {
     return res.status(403).json({ success: false, message: "Unauthorized" });
@@ -249,10 +250,11 @@ export const getTopBlogs = async (req, res) => {
     res.json({ success: true, blogs: topBlogs });
   } catch (err) {
     console.error("Error in getTopBlogs:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch top blogs" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch top blogs" });
   }
 };
-
 
 export const getFavoriteBlogs = async (req, res) => {
   try {
@@ -272,4 +274,3 @@ export const getFavoriteBlogs = async (req, res) => {
     });
   }
 };
-
