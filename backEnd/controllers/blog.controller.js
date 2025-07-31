@@ -121,7 +121,7 @@ export const createBlog = async (req, res) => {
     description,
     image,
     user: req.user._id, // ผูกกับเจ้าของบล็อก
-    authorName: req.user.username, // ใส่ชื่อผู้ใช้เพื่อโชว์ได้เลย
+    authorName: req.user._id, // ใส่ชื่อผู้ใช้เพื่อโชว์ได้เลย
   });
 
   try {

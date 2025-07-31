@@ -1,7 +1,7 @@
 import express from "express";
 import {
   getMyProfile,
-  updateUsername,
+  updateUserInfo,
   updateAvatar,
   deleteAvatar,
 } from "../controllers/profile.controller.js";
@@ -13,7 +13,8 @@ const router = express.Router();
 router.use(protect);
 
 router.get("/", getMyProfile);
-router.put("/username", updateUsername);
+router.put("/update-info", updateUserInfo);
+
 router.put("/avatar", upload.single("avatar"), updateAvatar);
 router.delete("/avatar", deleteAvatar);
 

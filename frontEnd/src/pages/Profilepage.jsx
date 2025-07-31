@@ -1,5 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useProfileStore } from "@/store/profileStore";
+import { useDisclosure } from "@chakra-ui/react";
+import EditBlogModal from "@/components/form/EditBlogModal";
+import { Link, useParams } from "react-router-dom";
+
 import {
   Box,
   Button,
@@ -16,11 +20,18 @@ import {
   useColorModeValue,
   Tooltip,
 } from "@chakra-ui/react";
-import { EditIcon, CheckIcon, CloseIcon, DeleteIcon, AddIcon } from "@chakra-ui/icons";
+import {
+  EditIcon,
+  CheckIcon,
+  CloseIcon,
+  DeleteIcon,
+  AddIcon,
+} from "@chakra-ui/icons";
 
 export function ProfilePage() {
   const toast = useToast();
   const fileInputRef = useRef();
+  const { id } = useParams();
 
   const {
     user,
@@ -28,23 +39,36 @@ export function ProfilePage() {
     loading,
     error,
     fetchProfile,
-    updateUsername,
+    fetchProfileById,
+    updateUserInfo,
     uploadAvatar,
     deleteAvatar,
     clearError,
   } = useProfileStore();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedBlog, setSelectedBlog] = useState(null);
 
   const [username, setUsername] = useState("");
+  const [instagram, setInstagram] = useState("");
   const [editingUsername, setEditingUsername] = useState(false);
+  const [editingInstagram, setEditingInstagram] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarDeleting, setAvatarDeleting] = useState(false);
 
+  // ถ้าไม่มี id ใน URL ให้ถือว่าเป็น profile ตัวเอง
+  const isOwner = !id || user?._id === id;
+
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (id) {
+      fetchProfileById(id); // ดึง profile ของ id อื่น (ต้องมีฟังก์ชันนี้ใน store)
+    } else {
+      fetchProfile(); // ดึง profile ตัวเอง
+    }
+  }, [id]);
 
   useEffect(() => {
     if (user?.username) setUsername(user.username);
+    if (user?.instagram) setInstagram(user.instagram);
   }, [user]);
 
   useEffect(() => {
@@ -60,11 +84,27 @@ export function ProfilePage() {
     }
   }, [error]);
 
-  const handleUpdateUsername = async () => {
-    const success = await updateUsername(username);
+  const handleEditBlog = (blog) => {
+    setSelectedBlog(blog);
+    onOpen();
+  };
+
+  const handleDeleteBlog = async (id) => {
+    const success = await useProfileStore.getState().deleteBlog(id);
+    toast({
+      title: success ? "Deleted" : "Error",
+      status: success ? "success" : "error",
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  const handleUpdateInfo = async () => {
+    const success = await updateUserInfo({username, instagram});
     if (success) {
-      toast({ title: "Username updated", status: "success" });
+      toast({ title: "Info updated", status: "success" });
       setEditingUsername(false);
+      setEditingInstagram(false);
     }
   };
 
@@ -103,8 +143,13 @@ export function ProfilePage() {
 
   return (
     <Box maxW="700px" mx="auto" p={6}>
-      <Heading mb={6} textAlign="center" color={textColor} fontWeight="extrabold">
-        My Profile
+      <Heading
+        mb={6}
+        textAlign="center"
+        color={textColor}
+        fontWeight="extrabold"
+      >
+        {isOwner ? "My Profile" : `${user?.username}'s Profile`}
       </Heading>
 
       <Box
@@ -130,9 +175,9 @@ export function ProfilePage() {
               mb={3}
               border="3px solid"
               borderColor="teal.400"
-              cursor="pointer"
+              cursor={isOwner ? "pointer" : "default"}
               transition="transform 0.2s ease"
-              _hover={{ transform: "scale(1.05)" }}
+              _hover={isOwner ? { transform: "scale(1.05)" } : undefined}
             />
           ) : (
             <Box
@@ -152,51 +197,52 @@ export function ProfilePage() {
               No Avatar
             </Box>
           )}
-
-          <HStack justify="center" spacing={4} mb={2}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              disabled={avatarUploading}
-              style={{ display: "none" }}
-              id="avatar-upload"
-            />
-            <label htmlFor="avatar-upload">
-              <Tooltip label="Upload Avatar" hasArrow>
-                <IconButton
-                  as="span"
-                  icon={<AddIcon />}
-                  colorScheme="teal"
-                  isLoading={avatarUploading}
-                  aria-label="Upload avatar"
-                  size="md"
-                  borderRadius="full"
-                  _hover={{ bg: "teal.600" }}
-                />
-              </Tooltip>
-            </label>
-            {user?.avatar?.url && (
-              <Tooltip label="Delete Avatar" hasArrow>
-                <IconButton
-                  icon={<DeleteIcon />}
-                  colorScheme="red"
-                  onClick={handleDeleteAvatar}
-                  isLoading={avatarDeleting}
-                  aria-label="Delete avatar"
-                  size="md"
-                  borderRadius="full"
-                  _hover={{ bg: "red.600" }}
-                />
-              </Tooltip>
-            )}
-          </HStack>
+          {isOwner && (
+            <HStack justify="center" spacing={4} mb={2}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                disabled={avatarUploading}
+                style={{ display: "none" }}
+                id="avatar-upload"
+              />
+              <label htmlFor="avatar-upload">
+                <Tooltip label="Upload Avatar" hasArrow>
+                  <IconButton
+                    as="span"
+                    icon={<AddIcon />}
+                    colorScheme="teal"
+                    isLoading={avatarUploading}
+                    aria-label="Upload avatar"
+                    size="md"
+                    borderRadius="full"
+                    _hover={{ bg: "teal.600" }}
+                  />
+                </Tooltip>
+              </label>
+              {user?.avatar?.url && (
+                <Tooltip label="Delete Avatar" hasArrow>
+                  <IconButton
+                    icon={<DeleteIcon />}
+                    colorScheme="red"
+                    onClick={handleDeleteAvatar}
+                    isLoading={avatarDeleting}
+                    aria-label="Delete avatar"
+                    size="md"
+                    borderRadius="full"
+                    _hover={{ bg: "red.600" }}
+                  />
+                </Tooltip>
+              )}
+            </HStack>
+          )}
         </Box>
 
         <Divider mb={5} />
 
-        <Box>
+        <Box mb={4}>
           <Text fontWeight="bold" mb={2} fontSize="lg" color={textColor}>
             Username:
           </Text>
@@ -206,16 +252,18 @@ export function ProfilePage() {
                 {user?.username}
               </Text>
               <Tooltip label="Edit Username" hasArrow>
-                <IconButton
-                  icon={<EditIcon />}
-                  onClick={() => setEditingUsername(true)}
-                  size="md"
-                  aria-label="Edit"
-                  colorScheme="teal"
-                  variant="outline"
-                  borderRadius="md"
-                  _hover={{ bg: "teal.50" }}
-                />
+                {isOwner && (
+                  <IconButton
+                    icon={<EditIcon />}
+                    onClick={() => setEditingUsername(true)}
+                    size="md"
+                    aria-label="Edit"
+                    colorScheme="teal"
+                    variant="outline"
+                    borderRadius="md"
+                    _hover={{ bg: "teal.50" }}
+                  />
+                )}
               </Tooltip>
             </HStack>
           ) : (
@@ -229,7 +277,7 @@ export function ProfilePage() {
               <Tooltip label="Save" hasArrow>
                 <IconButton
                   icon={<CheckIcon />}
-                  onClick={handleUpdateUsername}
+                  onClick={handleUpdateInfo}
                   colorScheme="green"
                   size="md"
                   isLoading={loading}
@@ -253,6 +301,84 @@ export function ProfilePage() {
             </HStack>
           )}
         </Box>
+
+        <Box mb={4}>
+          <Text fontWeight="bold" mb={2} fontSize="lg" color={textColor}>
+            Instagram:
+          </Text>
+          {!editingInstagram ? (
+            <HStack spacing={3}>
+              {user?.instagram ? (
+                isOwner ? (
+                  <Text fontSize="xl" color={textColor} fontWeight="medium">
+                    {user.instagram}
+                  </Text>
+                ) : (
+                  <Link
+                    href={`https://instagram.com/${user.instagram}`}
+                    isExternal
+                    color="pink.500"
+                    fontWeight="bold"
+                  >
+                    @{user.instagram}
+                  </Link>
+                )
+              ) : (
+                <Text color="gray.500" fontStyle="italic">
+                  No Instagram linked.
+                </Text>
+              )}
+              {isOwner && (
+                <Tooltip label="Edit Instagram" hasArrow>
+                  <IconButton
+                    icon={<EditIcon />}
+                    onClick={() => setEditingInstagram(true)}
+                    size="md"
+                    aria-label="Edit Instagram"
+                    colorScheme="teal"
+                    variant="outline"
+                    borderRadius="md"
+                    _hover={{ bg: "teal.50" }}
+                  />
+                </Tooltip>
+              )}
+            </HStack>
+          ) : (
+            <HStack spacing={3}>
+              <Input
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                size="md"
+                autoFocus
+                placeholder="Instagram username"
+              />
+              <Tooltip label="Save" hasArrow>
+                <IconButton
+                  icon={<CheckIcon />}
+                  onClick={handleUpdateInfo}
+                  colorScheme="green"
+                  size="md"
+                  isLoading={loading}
+                  aria-label="Save Instagram"
+                  borderRadius="md"
+                  _hover={{ bg: "green.50" }}
+                />
+              </Tooltip>
+              <Tooltip label="Cancel" hasArrow>
+                <IconButton
+                  icon={<CloseIcon />}
+                  onClick={() => {
+                    setInstagram(user?.instagram || "");
+                    setEditingInstagram(false);
+                  }}
+                  size="md"
+                  aria-label="Cancel Instagram"
+                  borderRadius="md"
+                />
+              </Tooltip>
+            </HStack>
+          )}
+        </Box>
       </Box>
 
       <Box>
@@ -266,22 +392,55 @@ export function ProfilePage() {
         ) : (
           <VStack spacing={5} align="stretch">
             {blogs.map((b) => (
-              <Box
-                key={b._id}
-                p={5}
-                bg={cardBg}
-                borderWidth="1px"
-                borderRadius="md"
-                transition="box-shadow 0.3s ease"
-                _hover={{ shadow: "lg", bg: hoverBg, cursor: "pointer" }}
-              >
-                <Text fontWeight="bold" fontSize="xl" color={textColor}>
-                  {b.title}
-                </Text>
-                <Text fontSize="md" color={subtitleColor} noOfLines={2}>
-                  {b.subtitle}
-                </Text>
-              </Box>
+              <Link to={`/blogs/${b._id}`} key={b._id}>
+                <Box
+                  key={b._id}
+                  p={5}
+                  bg={cardBg}
+                  borderWidth="1px"
+                  borderRadius="md"
+                  transition="box-shadow 0.3s ease"
+                  _hover={{ shadow: "lg", bg: hoverBg }}
+                >
+                  <HStack justify="space-between" align="start">
+                    <Box>
+                      <Text fontWeight="bold" fontSize="xl" color={textColor}>
+                        {b.title}
+                      </Text>
+                      <Text fontSize="md" color={subtitleColor} noOfLines={2}>
+                        {b.subtitle}
+                      </Text>
+                    </Box>
+                    {isOwner && (
+                      <HStack spacing={1}>
+                        <Tooltip label="Edit Blog">
+                          <IconButton
+                            icon={<EditIcon />}
+                            aria-label="Edit"
+                            size="sm"
+                            colorScheme="blue"
+                            onClick={() => handleEditBlog(b)}
+                          />
+                        </Tooltip>
+                        <Tooltip label="Delete Blog">
+                          <IconButton
+                            icon={<DeleteIcon />}
+                            aria-label="Delete"
+                            size="sm"
+                            colorScheme="red"
+                            onClick={() => handleDeleteBlog(b._id)}
+                          />
+                        </Tooltip>
+                        <EditBlogModal
+                          isOpen={isOpen}
+                          onClose={onClose}
+                          blog={selectedBlog}
+                        />
+                      </HStack>
+                    )}
+                  </HStack>
+                </Box>
+              </Link>
             ))}
           </VStack>
         )}

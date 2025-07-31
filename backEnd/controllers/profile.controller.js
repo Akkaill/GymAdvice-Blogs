@@ -9,7 +9,7 @@ export const getMyProfile = async (req, res) => {
     const userId = req.user._id;
 
     const user = await User.findById(userId).select(
-      "username email avatar role"
+      "username email avatar role instagram"
     );
     const blogs = await Blog.find({ user: userId })
       .sort({ createdAt: -1 })
@@ -27,26 +27,29 @@ export const getMyProfile = async (req, res) => {
 };
 
 // PUT /profile/username → แก้ไข username
-export const updateUsername = async (req, res) => {
+export const updateUserInfo = async (req, res) => {
   try {
-    const userId = req.params.id;
-    const { username } = req.body;
+    const userId = req.user._id;
+    const { username, instagram } = req.body;
 
-    if (!username)
-      return res.status(400).json({ message: "Username is required" });
+    if (!username && !instagram) {
+      return res.status(400).json({ message: "No fields provided to update" });
+    }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { username },
-      { new: true }
-    ).select("username");
-    res.json({ message: "Username updated", user });
+    const updateData = {};
+    if (username) updateData.username = username;
+    if (instagram) updateData.instagram = instagram;
+
+    const user = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    }).select("username instagram");
+
+    res.json({ message: "User info updated", user });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failed to update username", error: err.message });
+    res.status(500).json({ message: "Failed to update info", error: err.message });
   }
 };
+
 
 // PUT /profile/avatar → อัปโหลด / เปลี่ยน avatar
 export const updateAvatar = async (req, res) => {
@@ -76,6 +79,7 @@ export const updateAvatar = async (req, res) => {
 
     res.json({ message: "Avatar updated", avatar: user.avatar });
   } catch (err) {
+    console.error("Avatar Upload Error:", err);
     res
       .status(500)
       .json({ message: "Failed to update avatar", error: err.message });
@@ -85,17 +89,24 @@ export const updateAvatar = async (req, res) => {
 // DELETE /profile/avatar → ลบ avatar
 export const deleteAvatar = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const user = await User.findById(userId);
 
-    if (!user.avatar?.public_id)
-      return res.status(400).json({ message: "No avatar to delete" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    await cloudinary.uploader.destroy(user.avatar.public_id);
-    user.avatar = null;
+    if (user.avatar?.public_id) {
+      await cloudinary.uploader.destroy(user.avatar.public_id);
+    }
+
+    user.avatar = {
+      url: "",
+      public_id: "",
+    };
     await user.save();
 
-    res.json({ message: "Avatar deleted" });
+    res.json({ message: "Avatar deleted (if existed)" });
   } catch (err) {
     res
       .status(500)

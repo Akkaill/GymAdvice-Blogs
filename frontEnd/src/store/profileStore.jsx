@@ -1,4 +1,4 @@
-import {create} from "zustand";
+import { create } from "zustand";
 import axios from "../utils/axios";
 
 export const useProfileStore = create((set, get) => ({
@@ -24,25 +24,45 @@ export const useProfileStore = create((set, get) => ({
       });
     }
   },
+ fetchProfileById : async (userId) => {
+  try {
+    setLoading(true);
+    const res = await axios.get(`/users/${userId}`);
+    setUser(res.data);
+    // โหลดบล็อกของ userId ด้วย
+    await fetchUserBlogs(userId);
+  } catch (error) {
+    setError(error.message);
+  } finally {
+    setLoading(false);
+  }
+},
 
-  // อัปเดต username
-  updateUsername: async (username) => {
-    if (!username?.trim()) {
-      set({ error: "Username cannot be empty" });
+
+  updateUserInfo: async ({ username, instagram }) => {
+    if ((!username || !username.trim()) && (!instagram || !instagram.trim())) {
+      set({ error: "Please provide at least one field to update" });
       return false;
     }
     set({ loading: true, error: null });
     try {
-      const res = await axios.put(
-        "/profile/username",
-        { username: username.trim() },
-        { withCredentials: true }
-      );
-      // อัปเดต user state ใหม่
+      const payload = {};
+      if (username && username.trim()) payload.username = username.trim();
+      if (instagram && instagram.trim()) payload.instagram = instagram.trim();
+
+      const res = await axios.put("/profile/update-info", payload, {
+        withCredentials: true,
+      });
+
+      // อัปเดต user state ใหม่ด้วยข้อมูลที่ได้จาก response หรือที่ส่งไป
       set((state) => ({
-        user: { ...state.user, username: username.trim() },
+        user: {
+          ...state.user,
+          ...payload,
+        },
         loading: false,
       }));
+
       return true;
     } catch (err) {
       set({
@@ -80,11 +100,31 @@ export const useProfileStore = create((set, get) => ({
     }
   },
 
+  updateBlog: async (id, updatedFields) => {
+    try {
+      const res = await axios.put(`/blogs/${id}`, updatedFields, {
+        withCredentials: true,
+      });
+      const updated = res.data.data;
+      set((state) => ({
+        blogs: state.blogs.map((b) => (b._id === id ? updated : b)),
+      }));
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || "Update failed",
+      };
+    }
+  },
+
   // ลบ avatar
   deleteAvatar: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await axios.delete("/profile/avatar", { withCredentials: true });
+      const res = await axios.delete("/profile/avatar", {
+        withCredentials: true,
+      });
       await get().fetchProfile();
       set({ loading: false });
       return true;
