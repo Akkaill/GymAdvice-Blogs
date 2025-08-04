@@ -20,6 +20,6 @@ router.put("/update-role/:userId", updateUserRole);
 router.delete("/delete-user/:userId", deleteUser);
 router.delete("/delete-comment/:commentId", deleteComment);
 router.post("/create-admin", createAdmin);
-router.post("/revoke/:userId", revoke);
+// router.post("/revoke/:userId", revoke);
 
 export default router;

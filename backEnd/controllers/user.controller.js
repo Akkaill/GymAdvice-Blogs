@@ -276,6 +276,7 @@ export const getMe = async (req, res) => {
       _id: user._id,
       username: user.username,
       role: user.role,
+      avatar: user.avatar?.url || null,
     },
   });
 };
