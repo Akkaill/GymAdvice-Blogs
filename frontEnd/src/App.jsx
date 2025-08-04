@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./pages/Authorization/Unauthorized";
 import NotFoundPage from "./pages/Authorization/์NotfoundPage";
 import FavoriteListPage from "./pages/FavoriteListPage";
+import { ManageBlogs } from "./pages/ManageBlogs";
 
 function App() {
   const {
@@ -115,7 +116,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
-
+          <Route path="/manage-blogs" element={<ManageBlogs />} />
           <Route path="/favorites" element={<FavoriteListPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFoundPage />} />

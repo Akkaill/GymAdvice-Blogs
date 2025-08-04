@@ -28,10 +28,13 @@ export const getDashboardStats = async (req, res) => {
 };
 
 export const getRecentLogs = async (req, res) => {
+  const skip = parseInt(req.query.skip) || 0;
+  const limit = parseInt(req.query.limit) || 10;
   try {
     const logs = await Log.find()
       .sort({ createdAt: -1 })
-      .limit(10)
+      .skip(skip)
+      .limit(limit)
       .populate("performedBy", "username role");
 
     res.json({ success: true, data: logs });

@@ -6,6 +6,7 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 export const useDashboardStore = create((set, get) => ({
   stats: null,
   recentLogs: [],
+  logs: [],
   users: [],
   loadingStats: false,
   loadingLogs: false,
@@ -13,6 +14,9 @@ export const useDashboardStore = create((set, get) => ({
   errorStats: null,
   errorLogs: null,
   errorUsers: null,
+  hasMoreLogs: true,
+  skip: 0,
+  limit: 10,
 
   // --- ดึงสถิติ ---
   fetchStats: async () => {
@@ -64,9 +68,7 @@ export const useDashboardStore = create((set, get) => ({
     try {
       await axios.put(`${API}/superadmin/update-role/${userId}`, { role });
       set((state) => ({
-        users: state.users.map((u) =>
-          u._id === userId ? { ...u, role } : u
-        ),
+        users: state.users.map((u) => (u._id === userId ? { ...u, role } : u)),
       }));
     } catch (error) {
       console.error("Failed to update role", error);
@@ -85,19 +87,22 @@ export const useDashboardStore = create((set, get) => ({
     }
   },
 
-  // --- Revoke User ---
-  revokeUser: async (userId) => {
-    try {
-      await axios.post(`${API}/superadmin/revoke/${userId}`);
-    } catch (error) {
-      console.error("Failed to revoke user", error);
-    }
-  },
+  // // --- Revoke User ---
+  // revokeUser: async (userId) => {
+  //   try {
+  //     await axios.post(`${API}/superadmin/revoke/${userId}`);
+  //   } catch (error) {
+  //     console.error("Failed to revoke user", error);
+  //   }
+  // },
 
   // --- Create Admin ---
   createAdmin: async (username, password) => {
     try {
-      await axios.post(`${API}/superadmin/create-admin`, { username, password });
+      await axios.post(`${API}/superadmin/create-admin`, {
+        username,
+        password,
+      });
       // หลังสร้าง admin ให้ fetch users ใหม่
       await get().fetchUsers();
     } catch (error) {

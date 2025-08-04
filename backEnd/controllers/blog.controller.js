@@ -1,5 +1,6 @@
 import Blog from "../models/blogs.model.js";
 import mongoose from "mongoose";
+import { createNotification } from "../utils/notification.js";
 
 export const getBlogs = async (req, res) => {
   try {
@@ -80,7 +81,7 @@ export const getBlogById = async (req, res) => {
   const { id } = req.params;
   try {
     const blog = await Blog.findById(id)
-      .populate("authorName", "username _id") 
+      .populate("authorName", "username _id")
       .populate({
         path: "favoritedBy",
         select: "_id",
@@ -164,8 +165,18 @@ export const deleteBlog = async (req, res) => {
     return res.status(404).json({ success: false, message: "InvalidId" });
   }
   try {
-    await Blog.findByIdAndDelete(id);
-    res.status(200).json({ success: true, message: "deleted completely" });
+    const blog = await Blog.findByIdAndDelete(id);
+
+    await createNotification({
+      user: blog.user,
+      type: "delete",
+      title: `${blog.title} was deleted by Superadmin.`,
+      content: `Your blog "${blog.title}" was deleted by Superadmin.`,
+    });
+
+    res
+      .status(200)
+      .json({ success: true, message: "deleted completely", data: blog });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error to Delete" });
   }
@@ -175,12 +186,10 @@ export const deleteBlog = async (req, res) => {
 export const toggleFavorite = async (req, res) => {
   const blogId = req.params.id;
 
-  // ✅ เช็กว่า ID ถูกต้อง
   if (!mongoose.Types.ObjectId.isValid(blogId)) {
     return res.status(400).json({ success: false, message: "Invalid blog ID" });
   }
 
-  // ✅ เช็กว่า user login จริง
   if (!req.user || !req.user._id) {
     return res
       .status(401)
@@ -196,12 +205,27 @@ export const toggleFavorite = async (req, res) => {
   if (!Array.isArray(blog.favoritedBy)) blog.favoritedBy = [];
 
   const index = blog.favoritedBy.findIndex((id) => id.equals(userId));
-
+  let action = "";
   if (index === -1) {
     blog.favoritedBy.push(userId);
+    action = "added";
+
+    if (!req.user._id.equals(blog.author._id)) {
+      await createNotification({
+        user: blog.user,
+        type: "favorite",
+        title: `${blog.title} was favorited.`,
+        content: `${req.user.username || "Someone"} favorited your blog "${
+          blog.title
+        }"`,
+        link: `/blogs/${blog._id}`,
+      });
+    }
   } else {
     blog.favoritedBy.splice(index, 1);
+    action = "removed";
   }
+
   blog.updatedAt = new Date();
   await blog.save();
   const updatedBlog = await Blog.findById(blogId)

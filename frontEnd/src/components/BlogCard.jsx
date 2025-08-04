@@ -1,17 +1,16 @@
-import { Box, HStack, Heading, Image, Text } from "@chakra-ui/react";
+import { Box, HStack, Heading, Image, Text} from "@chakra-ui/react";
 import { FaArrowRightLong } from "react-icons/fa6";
+import { MdDeleteOutline } from "react-icons/md";
+
 import { Link, useLocation } from "react-router-dom";
 import { FavoriteButton } from "./button/FavoriteButton";
 
-export default function BlogCard({ blog }) {
+export default function BlogCard({ blog, showDelete = false, onDelete }) {
   if (!blog) return null;
 
   const location = useLocation();
   const isFavoritePage = location.pathname.includes("/favorites");
-
-  const favCount = Array.isArray(blog.favoritedBy)
-    ? blog.favoritedBy.length
-    : 0;
+  const isManagePage = location.pathname === "/manage-blogs";
 
   return (
     <Box
@@ -67,8 +66,21 @@ export default function BlogCard({ blog }) {
 
         {/* Actions */}
         <HStack justifyContent="space-between" spacing={3}>
-          {!isFavoritePage && (
-            <FavoriteButton blogId={blog._id} />
+          {isManagePage ? (
+            <>
+              {showDelete && (
+                <Box
+                  onClick={() => onDelete(blog._id)}
+                  mt={2}
+                  transition="all 0.3s"
+                  _hover={{ transform: "translateY(-3px)", color: "red.500" }}
+                >
+                  <MdDeleteOutline />
+                </Box>
+              )}
+            </>
+          ) : (
+            <> {!isFavoritePage && <FavoriteButton blogId={blog._id} />}</>
           )}
 
           <Link to={`/blogs/${blog._id}`}>
@@ -85,9 +97,6 @@ export default function BlogCard({ blog }) {
                 Learn More
               </Text>
               <FaArrowRightLong color="blue.400" />
-              <Text fontSize="xs" color="gray.500">
-                Favs: {favCount}
-              </Text>
             </Box>
           </Link>
         </HStack>

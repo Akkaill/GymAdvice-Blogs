@@ -35,9 +35,14 @@ const MotionVStack = motion.create(VStack);
 
 const Navbar = () => {
   const { isOpen, onClose, onOpen } = useDisclosure();
-  const { user, logout, isUserReady, isAuthenticated } = useAuthStore(); // แก้ชื่อ isAuthenticated
-  const { notifications, unseenCount, fetchNotifications, markAsRead,loading } =
-    useNotificationStore();
+  const { user, logout, isUserReady, isAuthenticated } = useAuthStore();
+  const {
+    notifications,
+    unseenCount,
+    fetchNotifications,
+    markAsRead,
+    loading,
+  } = useNotificationStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -194,7 +199,14 @@ const Navbar = () => {
                                 colorScheme={n.read ? "gray" : "blue"}
                                 mr={2}
                               />
-                              {n.title}
+                              <Text
+                              
+                                py={1}
+                                fontSize="sm"
+                                color="gray.500"
+                              >
+                                {n.title}
+                              </Text>
                             </MenuItem>
                           ))
                         )}
@@ -215,7 +227,7 @@ const Navbar = () => {
                     >
                       <Avatar
                         size="sm"
-                        src={user.avatar}
+                        src={user?.avatar}
                         border="1px solid #ccc"
                         bg="gray.100"
                       />
