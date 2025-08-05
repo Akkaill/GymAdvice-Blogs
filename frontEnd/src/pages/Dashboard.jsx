@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuthStore } from "@/store/auth";
-
+import { ChevronDownIcon } from "@chakra-ui/icons";
 import {
   Spinner,
   Button,
@@ -18,14 +18,13 @@ import {
   Text,
   HStack,
 } from "@chakra-ui/react";
-import { ChevronDownIcon } from "@chakra-ui/icons";
 import { motion } from "framer-motion";
 import { FiHome, FiUsers, FiFileText } from "react-icons/fi";
 
 const MotionBox = motion.create(Box);
-const MotionMenuList = motion.create(MenuList);
 const MotionVStack = motion.create(VStack);
 const MotionTr = motion.tr;
+const MotionMenuList = motion.create(MenuList);
 
 export default function Dashboard() {
   const {
@@ -44,17 +43,17 @@ export default function Dashboard() {
   } = useDashboardStore();
 
   const { user, loading: authLoading, logout } = useAuthStore();
-
   const [roleChanges, setRoleChanges] = useState({});
   const [newAdmin, setNewAdmin] = useState({ username: "", password: "" });
   const navigate = useNavigate();
   const toast = useToast();
 
   useEffect(() => {
-    if (!authLoading) {
-      if (!user || !["admin", "superadmin"].includes(user.role)) {
-        navigate("/unauthorized");
-      }
+    if (
+      !authLoading &&
+      (!user || !["admin", "superadmin"].includes(user.role))
+    ) {
+      navigate("/unauthorized");
     }
   }, [authLoading, user, navigate]);
 
@@ -63,7 +62,6 @@ export default function Dashboard() {
       fetchStats();
       fetchRecentLogs();
       fetchUsers();
-      // ดึง blogs เบื้องต้น
     }
   }, [user]);
 
@@ -92,29 +90,25 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-[#1a1c1f] via-[#1e2126] to-[#141518] text-white font-sans">
+    <div className="min-h-screen flex bg-gradient-to-br from-[#181920] via-[#1d1f27] to-[#141518] text-white font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-gradient-to-b from-[#1e1f24] to-[#16171b] backdrop-blur-xl p-6 shadow-2xl border-r border-gray-700 rounded-r-2xl">
+      <aside className="w-64 bg-gradient-to-b from-[#1f2230] to-[#151720] p-6 shadow-xl border-r border-gray-700 rounded-r-2xl">
         <div className="flex items-center justify-between mb-8">
           <Text
-            fontWeight="500"
-            fontSize="md"
-            color="blue.400"
-            transition="all 0.3s ease"
+            fontWeight="bold"
+            fontSize="lg"
+            className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"
           >
             Admin Panel
           </Text>
           <Link
             to="/"
             className="p-2 rounded-full bg-[#22252a] hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30 transition-all"
-            title="Go Home"
           >
             <FiHome className="text-white w-5 h-5" />
           </Link>
         </div>
-
         <nav className="space-y-3">
-          {/* เอา Dashboard ออก */}
           {user?.role === "superadmin" && (
             <Link
               to="/manage-blogs"
@@ -123,12 +117,12 @@ export default function Dashboard() {
               <FiFileText className="w-5 h-5" /> Blogs
             </Link>
           )}
-          <a
-            href="#users"
+          <Link
+            to="/manage-users"
             className="flex items-center gap-3 py-3 px-4 rounded-lg bg-[#22252a] hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 hover:shadow-lg hover:shadow-blue-500/30 transition-all font-medium"
           >
             <FiUsers className="w-5 h-5" /> Users
-          </a>
+          </Link>
           <a
             href="#logs"
             className="flex items-center gap-3 py-3 px-4 rounded-lg bg-[#22252a] hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 hover:shadow-lg hover:shadow-blue-500/30 transition-all font-medium"
@@ -170,89 +164,51 @@ export default function Dashboard() {
           ) : (
             stats && (
               <>
-                <MotionBox
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  bg="blue.600"
-                  p={6}
-                  rounded="xl"
-                  shadow="lg"
-                  _hover={{ transform: "scale(1.05)", shadow: "2xl" }}
-                >
-                  <Text fontSize="lg">Users</Text>
-                  <Text fontSize="3xl" fontWeight="bold">
-                    {stats.users}
-                  </Text>
-                </MotionBox>
-
-                <MotionBox
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  bg="purple.600"
-                  p={6}
-                  rounded="xl"
-                  shadow="lg"
-                  _hover={{ transform: "scale(1.05)", shadow: "2xl" }}
-                >
-                  <Text fontSize="lg">Admins</Text>
-                  <Text fontSize="3xl" fontWeight="bold">
-                    {stats.admins.length < 1 ? "0" : stats.admins}
-                  </Text>
-                </MotionBox>
-
-                <MotionBox
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  bg="pink.600"
-                  p={6}
-                  rounded="xl"
-                  shadow="lg"
-                  _hover={{ transform: "scale(1.05)", shadow: "2xl" }}
-                >
-                  <Text fontSize="lg">Superadmins</Text>
-                  <Text fontSize="3xl" fontWeight="bold">
-                    {stats.superadmin}
-                  </Text>
-                </MotionBox>
-
-                <MotionBox
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  bg="blue.800"
-                  p={6}
-                  rounded="xl"
-                  shadow="lg"
-                  _hover={{ transform: "scale(1.05)", shadow: "2xl" }}
-                >
-                  <Text fontSize="lg">Blogs</Text>
-                  <Text fontSize="3xl" fontWeight="bold">
-                    {stats.blogs}
-                  </Text>
-                </MotionBox>
-
-                <MotionBox
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  bg="orange.600"
-                  p={6}
-                  rounded="xl"
-                  shadow="lg"
-                  _hover={{ transform: "scale(1.05)", shadow: "2xl" }}
-                >
-                  <Text fontSize="lg">Logs</Text>
-                  <Text fontSize="3xl" fontWeight="bold">
-                    {stats.logs}
-                  </Text>
-                </MotionBox>
+                {[
+                  {
+                    label: "Users",
+                    value: stats.users,
+                    color: "from-blue-400 to-blue-600",
+                  },
+                  {
+                    label: "Admins",
+                    value: stats.admins.length || 0,
+                    color: "from-purple-400 to-purple-600",
+                  },
+                  {
+                    label: "Superadmins",
+                    value: stats.superadmin,
+                    color: "from-pink-400 to-pink-600",
+                  },
+                  {
+                    label: "Blogs",
+                    value: stats.blogs,
+                    color: "from-indigo-400 to-indigo-600",
+                  },
+                  {
+                    label: "Logs",
+                    value: stats.logs,
+                    color: "from-orange-400 to-orange-600",
+                  },
+                ].map((item, idx) => (
+                  <MotionBox
+                    key={idx}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                    className={`bg-gradient-to-r ${item.color} p-6 rounded-2xl shadow-lg cursor-pointer transform transition-transform hover:scale-105`}
+                  >
+                    <Text fontSize="lg">{item.label}</Text>
+                    <Text fontSize="3xl" fontWeight="bold">
+                      {item.value}
+                    </Text>
+                  </MotionBox>
+                ))}
               </>
             )
           )}
         </section>
+
         {user.role === "superadmin" && (
           <>
             {/* Users Management */}
@@ -271,7 +227,7 @@ export default function Dashboard() {
                     <thead>
                       <tr className="bg-[#2b2e33] text-gray-300 border-b border-gray-700">
                         <th className="py-3 px-4">Username</th>
-                        <th className="py-3 px-4">Role</th>
+                        <th className="py-3 px-4 text-center">Role</th>
                         <th className="py-3 px-4">Actions</th>
                       </tr>
                     </thead>
@@ -285,85 +241,90 @@ export default function Dashboard() {
                           className="border-b border-gray-700 hover:bg-[#2a2d32] transition"
                         >
                           <td className="py-2 px-4">{u.username}</td>
-                          <td className="py-2 px-4">
-                            <Menu>
-                              <MenuButton
-                                as={Button}
-                                rightIcon={<ChevronDownIcon />}
-                                size="sm"
-                                bg="#2b2e33"
-                                color="white"
-                                borderRadius="md"
-                                px={4}
-                                minW="160px"
-                                _hover={{ bg: "#3a3d44" }}
-                                _expanded={{ bg: "blue.500" }}
-                              >
-                                {roleChanges[u._id] || u.role}
-                              </MenuButton>
-                              <MotionMenuList
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.2 }}
-                                bg="#2b2e33"
-                                borderRadius="lg"
-                                boxShadow="lg"
-                                minW="160px"
-                                border="1px solid #3a3d44"
-                                color="white"
-                                py={1}
-                              >
-                                {["user", "admin", "superadmin"].map((r) => (
-                                  <MenuItem
-                                    key={r}
-                                    onClick={() =>
-                                      setRoleChanges({
-                                        ...roleChanges,
-                                        [u._id]: r,
-                                      })
-                                    }
-                                    bg={
-                                      roleChanges[u._id] === r || u.role === r
-                                        ? "#3a3d44"
-                                        : "transparent"
-                                    }
-                                    _hover={{ bg: "blue.500", color: "white" }}
-                                  >
-                                    {r}
-                                  </MenuItem>
-                                ))}
-                              </MotionMenuList>
-                            </Menu>
+                          <td className="py-2 px-4 text-center">
+                            {u.role === "superadmin" ? (
+                              <span className="inline-flex items-center justify-center gap-1 px-3 py-1 text-sm font-semibold text-yellow-300 bg-yellow-900/40 rounded-full border border-yellow-500/50">
+                                👑 Super Admin
+                              </span>
+                            ) : (
+                              <Menu>
+                                <MenuButton
+                                  as={Button}
+                                  rightIcon={<ChevronDownIcon />}
+                                  size="sm"
+                                  bg="#2b2e33"
+                                  color="white"
+                                  borderRadius="md"
+                                  px={4}
+                                  minW="160px"
+                                  _hover={{ bg: "#3a3d44" }}
+                                >
+                                  {roleChanges[u._id] || u.role}
+                                </MenuButton>
+                                <MotionMenuList
+                                  initial={{ opacity: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ duration: 0.2 }}
+                                  bg="#2b2e33"
+                                  borderRadius="lg"
+                                  boxShadow="lg"
+                                  minW="160px"
+                                  border="1px solid #3a3d44"
+                                  color="white"
+                                  py={1}
+                                >
+                                  {["user", "admin", "superadmin"].map((r) => (
+                                    <MenuItem
+                                      key={r}
+                                      onClick={() =>
+                                        setRoleChanges({
+                                          ...roleChanges,
+                                          [u._id]: r,
+                                        })
+                                      }
+                                      bg={
+                                        roleChanges[u._id] === r || u.role === r
+                                          ? "#3a3d44"
+                                          : "transparent"
+                                      }
+                                      _hover={{
+                                        bg: "blue.500",
+                                        color: "white",
+                                      }}
+                                    >
+                                      {r}
+                                    </MenuItem>
+                                  ))}
+                                </MotionMenuList>
+                              </Menu>
+                            )}
                           </td>
                           <td className="py-2 px-4">
                             <div className="flex gap-3">
-                              {user._id !== u._id && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    bgGradient="linear(to-r, blue.400, purple.400)"
-                                    color="white"
-                                    rounded="lg"
-                                    shadow="md"
-                                    _hover={{
-                                      bgGradient:
-                                        "linear(to-r, blue.500, purple.500)",
-                                    }}
-                                    onClick={() => handleSaveRole(u._id)}
-                                  >
-                                    Save
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    colorScheme="red"
-                                    rounded="lg"
-                                    onClick={() => deleteUser(u._id)}
-                                  >
-                                    Delete
-                                  </Button>
-                                </>
-                              )}
+                              {user._id !== u._id &&
+                                u.role !== "superadmin" && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      bgGradient="linear(to-r, blue.400, purple.400)"
+                                      color="white"
+                                      rounded="lg"
+                                      shadow="md"
+                                      onClick={() => handleSaveRole(u._id)}
+                                    >
+                                      Save
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      colorScheme="red"
+                                      rounded="lg"
+                                      onClick={() => deleteUser(u._id)}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </>
+                                )}
                             </div>
                           </td>
                         </MotionTr>
@@ -373,6 +334,7 @@ export default function Dashboard() {
                 </div>
               )}
 
+              {/* Create Admin */}
               <MotionBox
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -418,6 +380,7 @@ export default function Dashboard() {
             </section>
           </>
         )}
+
         {/* Logs */}
         <section
           id="logs"
@@ -426,7 +389,6 @@ export default function Dashboard() {
           <h2 className="text-2xl mb-4 font-semibold text-blue-300 pb-3">
             Recent Logs
           </h2>
-
           {loadingLogs ? (
             <Spinner />
           ) : recentLogs.length === 0 ? (

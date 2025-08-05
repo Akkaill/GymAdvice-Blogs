@@ -6,6 +6,7 @@ import {
   Heading,
   Input,
   VStack,
+  Textarea
 } from "@chakra-ui/react";
 import { toast } from "sonner";
 
@@ -59,7 +60,7 @@ export const CreatePage = () => {
     }
   };
   return (
-    <Container maxW={"container.sm"}>
+    <Container maxW={"container.sm"} pt={28}>
       <VStack wordSpacing={8}>
         <Heading as={"h1"} textAlign={"center"} mb={8}>
           Create New Blog
@@ -82,10 +83,11 @@ export const CreatePage = () => {
                 setNewBlog({ ...newBlog, subtitle: e.target.value })
               }
             />
-            <Input
+            <Textarea
               placeholder="description"
               name="description"
               value={newBlog.description}
+              height={'28'}
               onChange={(e) =>
                 setNewBlog({ ...newBlog, description: e.target.value })
               }

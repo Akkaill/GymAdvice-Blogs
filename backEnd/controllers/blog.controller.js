@@ -210,7 +210,7 @@ export const toggleFavorite = async (req, res) => {
     blog.favoritedBy.push(userId);
     action = "added";
 
-    if (!req.user._id.equals(blog.author._id)) {
+    if (!req.user._id.equals(blog.authorName._id)) {
       await createNotification({
         user: blog.user,
         type: "favorite",

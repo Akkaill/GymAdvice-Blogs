@@ -13,6 +13,8 @@ export const MainLayout = () => {
     path === "/register" ||
     path === "/dashboard" ||
     path === "/unauthorized" ||
+    path === "/manage-blogs" ||
+    path === "/manage-users" ||
     path.includes("notfound");
   const isHome = path === "/";
   const contentPt = hideNavbar ? "0" : isHome ? "0" : "24";

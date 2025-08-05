@@ -11,7 +11,7 @@ import {
 import BlogCard from "@/components/BlogCard";
 import { useBlogStore } from "@/store/blog";
 import { useInView } from "react-intersection-observer";
-import { SearchFilters } from "@/components/SearchFilters";
+import { SearchFilters } from "@/components/search/SearchFilters";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/store/auth";
 

@@ -12,7 +12,7 @@ import { useBlogStore } from "@/store/blog";
 import BlogCard from "@/components/BlogCard";
 import { HeroSection } from "@/components/HeroSection";
 import { Section } from "@/components/Section";
-import { SearchFilters } from "@/components/SearchFilters";
+import { SearchFilters } from "@/components/search/SearchFilters";
 import { TopBlogs } from "@/components/TopBlogs";
 
 export const HomePage = () => {
