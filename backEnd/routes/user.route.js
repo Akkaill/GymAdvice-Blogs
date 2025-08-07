@@ -15,7 +15,7 @@ import {
 } from "../controllers/user.controller.js";
 import {
   protect,
-  isAdmin,
+  isSuperAdmin,
   isSelfOrAdmin,
   otpRateLimit,
 } from "../middleware/authMiddleware.js";
@@ -38,7 +38,7 @@ router.get("/me", protect, getMe);
 //Admin or General User
 router.put("/:id/password", protect, isSelfOrAdmin, updateUserPassword);
 
-// Admin only
-router.get("/users", protect, isAdmin, getAllUsers);
+// Superadmin only
+router.get("/all", protect, isSuperAdmin, getAllUsers);
 
 export default router;

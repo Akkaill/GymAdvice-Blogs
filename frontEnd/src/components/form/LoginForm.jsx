@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth";
 import {
@@ -12,16 +12,22 @@ import {
   InputGroup,
   InputRightElement,
   VStack,
-  Text,
   useToast,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from "@chakra-ui/react";
-
+import VerifyOTP from "./VerifyOTP";
 
 export default function LoginForm() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const { user, login, error, loading } = useAuthStore();
+  const { login, loading } = useAuthStore();
+  const [loginError, setLoginError] = useState("");
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpContact, setOtpContact] = useState("");
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -35,39 +41,92 @@ export default function LoginForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+  useEffect(() => {
+    setLoginError("");
+    setErrors({ email: "", password: "" });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+   
+    setErrors({ email: "", password: "" });
+    setLoginError("");
+
     if (!validate()) return;
 
     const res = await login(form.email, form.password);
 
-    if (res.success) {
-      if (res.user?.role === "admin" || res.user?.role === "superadmin") {
-        navigate("/dashboard");
-      } else {
-        navigate("/");
+    // ❗ ถ้า login ไม่สำเร็จ → เช็กว่าต้อง OTP หรือไม่
+    if (!res.success) {
+      // ❗ ถ้า require OTP → เด้งไปหน้า verify OTP
+      if (res.requireVerification) {
+        toast({
+          title: "OTP Required",
+          description: "Please verify your OTP to continue.",
+          status: "warning",
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate("/verify-otp-login", {
+          state: { email: form.email, password: form.password },
+        });
+        return;
       }
-    } else if (res.requireVerification) {
-      toast({
-        title: "OTP Required",
-        description: "Please verify your OTP to continue.",
-        status: "warning",
-        duration: 5000,
-        isClosable: true,
+
+      // ❌ รหัสผิด หรือ error อื่น → แสดง error
+      setErrors({
+        email: "",
+        password: "Invalid email or password",
       });
 
-      navigate("/verify-otp", { state: { email: form.email } });
-    } else {
+      setLoginError(res.message || "Invalid email or password");
+
       toast({
         title: "Login Failed",
-        description: res.message || "Invalid credentials",
+        description: "Invalid email or password",
         status: "error",
         duration: 5000,
         isClosable: true,
       });
+
+      return;
+    }
+
+    setLoginError("");
+    setErrors({ email: "", password: "" });
+
+    if (res.user?.role === "admin" || res.user?.role === "superadmin") {
+      navigate("/dashboard");
+    } else {
+      navigate("/");
     }
   };
+
+  if (otpStep) {
+    return (
+      <VerifyOTP
+        contact={otpContact}
+        onSuccess={async () => {
+          // OTP ผ่านแล้ว ลอง login ใหม่
+          const res = await login(form.email, form.password);
+          if (res.success) {
+            toast({
+              title: "Login Successful",
+              status: "success",
+              duration: 3000,
+              isClosable: true,
+            });
+            if (res.user?.role === "admin" || res.user?.role === "superadmin") {
+              navigate("/dashboard");
+            } else {
+              navigate("/");
+            }
+          }
+        }}
+      />
+    );
+  }
 
   return (
     <Box
@@ -79,16 +138,9 @@ export default function LoginForm() {
       boxShadow="lg"
       borderRadius="md"
     >
-     
       <Heading size="lg" mb={6} textAlign="center">
-        Welcome 
+        Welcome
       </Heading>
-
-      {error && (
-        <Text color="red.500" mb={4} textAlign="center">
-          {error}
-        </Text>
-      )}
 
       <form onSubmit={handleSubmit}>
         <VStack spacing={4}>

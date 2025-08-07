@@ -12,7 +12,16 @@ export const useAuthStore = create((set, get) => ({
   isAuthenticated: false,
   isLoggingOut: false,
   hasAttemptedAuth: false,
+  users: [],
+  searchUser: "",
+  sortUserBy: "createdAt",
+  sortUserOrder: "desc",
+  loadingUsers: false,
 
+  setSearchUser: (term) => set({ searchUser: term }),
+  setSortUser: (sortBy, order) =>
+    set({ sortUserBy: sortBy, sortUserOrder: order }),
+  resetUsers: () => set({ users: [] }),
   setUser: (user) =>
     set({
       user,
@@ -21,6 +30,31 @@ export const useAuthStore = create((set, get) => ({
 
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
+
+  fetchAllUsers: async () => {
+    const { searchUser, sortUserBy, sortUserOrder } = get();
+    set({ loadingUsers: true });
+    try {
+      const res = await axios.get(`${API}/users/all`, {
+        params: {
+          search: searchUser,
+          sortBy: sortUserBy,
+          order: sortUserOrder,
+        },
+        withCredentials: true,
+      });
+      set({
+        users: Array.isArray(res.data?.data) ? res.data.data : [],
+        loadingUsers: false,
+      });
+    } catch (err) {
+      console.error(
+        "❌ Failed to fetch users:",
+        err?.response?.data || err.message
+      );
+      set({ loadingUsers: false });
+    }
+  },
 
   register: async ({ email, password, phone, username }) => {
     set({ loading: true, error: null });
@@ -57,35 +91,53 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  login: async (email, password) => {
+  login: async (email, password, otp) => {
     set({ loading: true, error: null });
     try {
       const res = await axios.post(
         `${API}/users/login`,
-        { email, password },
+        { email, password, otp },
         { withCredentials: true }
       );
 
-      const { accessToken, user } = res.data;
+      if (res.requireVerification) {
+        return {
+          success: false, // ยังไม่สำเร็จ แต่แจ้งว่า OTP ก่อน
+          requireVerification: true,
+          message: res.data.message,
+        };
+      }
 
-      if (accessToken) {
+      if (!res.data.success) {
+        return {
+          success: false,
+          message: res.data.message || "Email or password is invalid",
+        };
+      }
+
+      const { accessToken, user } = res.data;
+      if (accessToken && user) {
         axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
       }
- localStorage.setItem("hasRefreshToken", "true");
+      localStorage.setItem("hasRefreshToken", "true");
       set({
         user,
         token: accessToken,
         isAuthenticated: true,
       });
 
-      return { success: true };
+      return { success: true, user };
     } catch (err) {
-      set({ error: err.response?.data?.message || "Login failed" });
+      if (err.response?.data?.requireVerification) {
+        return {
+          success: false,
+          requireVerification: true,
+          message: err.response?.data?.message,
+        };
+      }
       return {
         success: false,
-        requireVerification: err.response?.data?.requireVerification,
-        email: err.response?.data?.email,
-        phone: err.response?.data?.phone,
+        message: err.response?.data?.message || "Login failed",
       };
     } finally {
       set({ loading: false });
@@ -114,40 +166,62 @@ export const useAuthStore = create((set, get) => ({
   },
 
   refreshToken: async () => {
-  try {
-    const res = await axios.post(
-      `${API}/users/refresh-token`,
-      {},
-      { withCredentials: true }
-    );
+    try {
+      const res = await axios.post(
+        `${API}/users/refresh-token`,
+        {},
+        { withCredentials: true }
+      );
+      if (!res.data?.success) {
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isUserReady: true,
+          hasAttemptedAuth: true,
+        });
+        delete axios.defaults.headers.common.Authorization;
+        return null;
+      }
 
-    const accessToken = res.data?.accessToken;
+      const accessToken = res.data?.accessToken;
+      if (accessToken) {
+        axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+        set({
+          token: accessToken,
+          isAuthenticated: true,
+          isUserReady: true,
+          hasAttemptedAuth: true,
+        });
+        return accessToken;
+      }
 
-    if (accessToken) {
-      axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-      set({ token: accessToken, isAuthenticated: true });
-      return accessToken;
+      // ⚠️ ไม่มี token
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isUserReady: true,
+        hasAttemptedAuth: true,
+      });
+      delete axios.defaults.headers.common.Authorization;
+      return null;
+    } catch (err) {
+      console.warn(
+        "🟠 refreshToken failed (may be no jid):",
+        err.response?.data?.message || err.message
+      );
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isUserReady: true, // ให้หยุดหมุน
+        hasAttemptedAuth: true,
+      });
+      delete axios.defaults.headers.common.Authorization;
+      return null;
     }
-
-    // ⚠️ ไม่มี accessToken แปลว่า refresh ไม่สำเร็จ
-    set({ user: null, token: null, isAuthenticated: false });
-    delete axios.defaults.headers.common.Authorization;
-    return null;
-
-  } catch (err) {
-    // 🧠 แบบ soft-fail: ไม่ได้ถือว่า error รุนแรง ถ้ายังไม่มี jid
-    console.warn("🟠 refreshToken failed (may be no jid):", err.response?.data?.message || err.message);
-    set({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isUserReady: true, // สำคัญมาก! เพื่อให้หน้าหยุดหมุน
-      hasAttemptedAuth: true,
-    });
-    delete axios.defaults.headers.common.Authorization;
-    return null;
-  }
-},
+  },
 
   logout: async () => {
     try {

@@ -16,6 +16,8 @@ import Unauthorized from "./pages/Authorization/Unauthorized";
 import NotFoundPage from "./pages/Authorization/์NotfoundPage";
 import FavoriteListPage from "./pages/FavoriteListPage";
 import { ManageBlogs } from "./pages/ManageBlogs";
+import ManageUserPage from "./pages/ManageUsers";
+import VerifyOtpLoginPage from "./pages/VerifyOtpLoginPage";
 
 function App() {
   const {
@@ -33,35 +35,29 @@ function App() {
     let cancelled = false;
 
     const initAuth = async () => {
+      const hasRefreshTokenCookie =
+        localStorage.getItem("hasRefreshToken") === "true";
+
+      if (!hasRefreshTokenCookie) {
+        useAuthStore.setState({
+          isUserReady: true,
+          hasAttemptedAuth: true,
+        });
+        return;
+      }
+
       try {
-        // เช็ค localStorage ก่อนเรียก refreshToken
-        const hasRefreshTokenCookie =
-          localStorage.getItem("hasRefreshToken") === "true";
-
-        if (!hasRefreshTokenCookie) {
-          console.log("No refresh token in localStorage, skip refresh");
-          return null; // ข้ามเรียก refreshToken
-        }
-
         const token = await refreshToken();
-        if (cancelled) return;
-
         if (token) {
-          await fetchUser(); // ได้ token แล้ว ไปดึงข้อมูล user
-        } else {
-          // ✅ refreshToken fail (เช่น ยังไม่ได้ login) —> อย่า logout
-          console.warn("⚠️ No token from refresh — not logged in (normal)");
+          await fetchUser();
         }
-      } catch (refreshErr) {
-        // ❌ ไม่ต้อง logout ที่นี่
-        console.error("❌ Refresh token failed:", refreshErr);
+      } catch (err) {
+        console.error("❌ Refresh token failed:", err);
       } finally {
-        if (!cancelled) {
-          useAuthStore.setState({
-            isUserReady: true,
-            hasAttemptedAuth: true,
-          });
-        }
+        useAuthStore.setState({
+          isUserReady: true,
+          hasAttemptedAuth: true,
+        });
       }
     };
 
@@ -78,14 +74,18 @@ function App() {
 
   useEffect(() => {
     if (!isUserReady) return;
-    if (!isAuthenticated) return;
 
-    const role = user?.role;
-    if (location.pathname === "/login" || location.pathname === "/register") {
-      if (role === "admin" || role === "superadmin") {
-        navigate("/dashboard", { replace: true });
-      } else {
-        navigate("/", { replace: true });
+    // ถ้าอยู่หน้า verify-otp ให้ข้าม redirect
+    if (location.pathname === "/verify-otp-login") return;
+
+    if (isAuthenticated && user) {
+      const role = user?.role;
+      if (location.pathname === "/login" || location.pathname === "/register") {
+        if (role === "admin" || role === "superadmin") {
+          navigate("/dashboard", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
       }
     }
   }, [isUserReady, isAuthenticated, user, location.pathname, navigate]);
@@ -115,8 +115,10 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/verify-otp-login" element={<VerifyOtpLoginPage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="/manage-blogs" element={<ManageBlogs />} />
+          <Route path="/manage-users" element={<ManageUserPage />} />
           <Route path="/favorites" element={<FavoriteListPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFoundPage />} />

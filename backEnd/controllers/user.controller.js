@@ -30,7 +30,8 @@ const sendRefreshCookie = (res, token) => {
   res.cookie("jid", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    sameSite: "lax",
+    path: "/api/users/refresh-token",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
@@ -38,8 +39,17 @@ const sendRefreshCookie = (res, token) => {
 // ดึงผู้ใช้ทั้งหมด (admin only)
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password"); // ไม่คืน password
-    res.status(200).json({ success: true, users });
+    const search = req.query.search || "";
+    const sortBy = req.query.sortBy || "createdAt";
+    const order = req.query.order === "asc" ? 1 : -1; // asc=1, desc=-1
+
+    const query = search ? { username: { $regex: search, $options: "i" } } : {};
+
+    const users = await User.find(query)
+      .select("-password")
+      .sort({ [sortBy]: order });
+
+    res.status(200).json({ success: true, data: users });
   } catch (err) {
     console.error("Get Users Error:", err.message);
     res.status(500).json({ success: false, message: "Server error" });
@@ -142,69 +152,14 @@ export const login = async (req, res) => {
   const settings = await SecuritySettings.findOne();
   const maxAttempts = settings?.maxLoginAttempts || 5;
 
-  // 1. ตรวจว่า locked ไว้ไหม
-  if (
-    user.lockedUntil &&
-    user.lockedUntil > now &&
-    user.failedLoginAttempts >= maxAttempts + 2
-  ) {
-    user.tempContactInfo = { email, phone, otpRequired: true };
-    await user.save();
-    await sendOTP(user._id, email, phone);
-    return res
-      .status(401)
-      .json({ success: false, message: `Locked. OTP sent.` });
-  }
-
-  // 2.ถ้า otpRequired แล้ว ยังไม่ส่ง otp เเละ เช็ค OTP จากฐานข้อมูล (ถ้าถูกล็อกไว้แล้ว)
-  if (user.tempContactInfo?.otpRequired) {
-    if (!otp) {
-      return res.status(401).json({
-        success: false,
-        message: "OTP required",
-        requireVerification: true,
-      });
-    }
-
-    const record = await TempOtp.findOne({ userId: user._id });
-    if (!record || record.otp !== otp || record.expiresAt < new Date()) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid or expired OTP" });
-    }
-    // OTP ถูกต้อง → clear
-
-    await TempOtp.deleteMany({ userId: user._id });
-    user.failedLoginAttempts = 0;
-    user.lockedUntil = null;
-    user.tempContactInfo = {};
-    await user.save();
-  }
-
-  // 3.ตรวจรหัสผ่าน
+  // 1. ตรวจรหัสผ่านก่อน
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-    // 3.1 ล็อค 3 นาที ถ้าเกิน maxAttempts
 
+    // ถ้าพลาดเกิน maxAttempts → ล็อค 3 นาที
     if (user.failedLoginAttempts >= maxAttempts) {
       user.lockedUntil = new Date(Date.now() + 3 * 60 * 1000);
-    }
-    // 3.2 ถ้าเกิน 3 นาทีแล้ว ยังพลาดอีก 2 รอบ → บังคับยืนยันตัวต
-
-    if (
-      user.lockedUntil &&
-      user.lockedUntil < new Date() &&
-      user.failedLoginAttempts >= maxAttempts + 2
-    ) {
-      user.tempContactInfo = { email, phone, otpRequired: true };
-      await sendOTP(user._id, email, phone);
-      await user.save();
-      return res.status(401).json({
-        success: false,
-        message: "Verification required. Please enter OTP",
-        requireVerification: true,
-      });
     }
 
     await user.save();
@@ -213,7 +168,70 @@ export const login = async (req, res) => {
       .json({ success: false, message: "Invalid credentials" });
   }
 
-  // 4️. ถ้ารหัสผ่านถูก สร้าง Token Login สำเร็จ
+  // 2. ถ้ารหัสถูก แต่ถูกล็อคเกินรอบ → OTP
+  if (
+    user.lockedUntil &&
+    user.lockedUntil > now &&
+    user.failedLoginAttempts >= maxAttempts + 2
+  ) {
+    user.tempContactInfo = { email, phone, otpRequired: true };
+    await user.save();
+    await sendOTP(user._id, email, phone);
+    return res.status(401).json({
+      success: false,
+      message: "Verification required. Please enter OTP",
+      requireVerification: true,
+    });
+  }
+
+  // 3. ถ้าต้องการ OTP อยู่แล้ว
+  if (user.tempContactInfo?.otpRequired) {
+    if (!otp) {
+      const existingOtp = await TempOtp.findOne({ userId: user._id });
+      if (!existingOtp) {
+        await sendOTP(user._id, email, phone);
+      }
+
+      return res.status(401).json({
+        success: false,
+        message: "OTP required",
+        requireVerification: true,
+      });
+    }
+
+     
+    const record = await await TempOtp.findOneAndUpdate(
+      { userId: user._id },
+      {
+        userId: user._id,
+        email,
+        phone,
+        otp,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      },
+      { upsert: true, new: true }
+    );
+
+    if (
+      !record ||
+      record.otp !== String(otp) ||
+      record.expiresAt < new Date()
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
+    }
+
+
+    await TempOtp.deleteMany({ userId: user._id });
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = null;
+    user.tempContactInfo = {};
+    await user.save();
+  }
+
+  // 4. Login สำเร็จ
   user.failedLoginAttempts = 0;
   user.lockedUntil = null;
   user.tempContactInfo = {};
@@ -238,9 +256,7 @@ export const login = async (req, res) => {
 export const refreshToken = async (req, res) => {
   const token = req.cookies.jid;
   if (!token) {
-    return res
-      .status(401)
-      .json({ success: false, message: "No refresh token" });
+    return res.json({ success: false, message: "No refresh token" });
   }
 
   try {
