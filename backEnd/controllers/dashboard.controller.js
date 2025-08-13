@@ -44,3 +44,48 @@ export const getRecentLogs = async (req, res) => {
       .json({ success: false, message: "Server Error", error: err.message });
   }
 };
+
+// จำนวน Blog ต่อวัน
+export const getBlogsPerDay = async (req, res) => {
+  try {
+    const result = await Blog.aggregate([
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const data = result.map(r => ({ date: r._id, count: r.count }));
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error", error: err.message });
+  }
+};
+
+// จำนวน Logins ต่อวัน
+export const getLoginsPerDay = async (req, res) => {
+  try {
+    const result = await Log.aggregate([
+      { $match: { action: "login" } },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const data = result.map(r => ({ date: r._id, count: r.count }));
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error", error: err.message });
+  }
+};
