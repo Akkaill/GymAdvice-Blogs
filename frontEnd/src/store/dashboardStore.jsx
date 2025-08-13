@@ -6,6 +6,8 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 export const useDashboardStore = create((set, get) => ({
   stats: null,
   recentLogs: [],
+  blogsPerDay: [],
+  loginsPerDay: [],
   logs: [],
   users: [],
   loadingStats: false,
@@ -33,6 +35,33 @@ export const useDashboardStore = create((set, get) => ({
     }
   },
 
+  fetchChartStats: async () => {
+    try {
+      set({ isLoadingStats: true, errorStats: null });
+
+      const [blogsRes, loginsRes] = await Promise.all([
+        axios.get("/dashboard/blogs-per-day"),
+        axios.get("/dashboard/logins-per-day"),
+      ]);
+      if (blogsRes.status === "fulfilled") {
+        console.log(blogsRes.value.data);
+      }
+      if (loginsRes.status === "fulfilled") {
+        console.log(loginsRes.value.data);
+      }
+
+      set({
+        blogsPerDay: blogsRes.data.data,
+        loginsPerDay: loginsRes.data.data,
+        isLoadingStats: false,
+      });
+    } catch (err) {
+      set({
+        errorStats: err?.response?.data?.message || "Error loading stats",
+        isLoadingStats: false,
+      });
+    }
+  },
   // --- ดึง logs ล่าสุด ---
   fetchRecentLogs: async () => {
     if (get().loadingLogs) return;

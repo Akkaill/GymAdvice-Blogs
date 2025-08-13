@@ -1,27 +1,33 @@
 import axios from "axios";
-import { useAuthStore } from "@/store/auth";
-
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const instance = axios.create({
   baseURL: API,
-  withCredentials: true, 
+  withCredentials: true,
 });
 
-
 instance.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    const { useAuthStore } = await import("@/store/auth");
     const { token } = useAuthStore.getState();
+
     if (token && !config.headers?.Authorization) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    if (config.url?.includes("/users/me")) {
+      console.debug(
+        "[REQ /me] Authorization:",
+        config.headers?.Authorization ? "present" : "missing"
+      );
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-
+// === Single-flight refresh ===
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -36,17 +42,30 @@ instance.interceptors.response.use(
   (res) => res,
   async (err) => {
     const originalRequest = err.config;
-    const auth = useAuthStore.getState();
 
-    // ถ้าไม่ได้ 401 หรือ request เคย retry แล้ว → ส่ง error ปกติ
-    if (err.response?.status !== 401 || originalRequest._retry) {
+    // ไม่ retry/refresh หากเป็น 429 (ป้องกัน retry storm)
+    if (err?.response?.status === 429 && !originalRequest._retried429) {
+      originalRequest._retried429 = true;
+      const header = err.response.headers?.["retry-after"];
+      const waitSec = Number(header) || 1; // default 1s ถ้าไม่มี header
+      await new Promise((r) => setTimeout(r, waitSec * 1000));
+      return instance(originalRequest);
+    }
+
+    // ไม่ยุ่งกับ /refresh-token เอง
+    if (originalRequest?.url?.includes("/users/refresh-token")) {
       return Promise.reject(err);
     }
 
-    // mark เพื่อกันวนลูป
+  
+
+    // เฉพาะ 401 และยังไม่เคย retry เท่านั้น
+    if (err.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(err);
+    }
     originalRequest._retry = true;
 
-    // ถ้ามี refresh กำลังรัน -> เข้าคิว
+    // ถ้า refresh กำลังทำ → เข้าคิวรอ
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -62,18 +81,26 @@ instance.interceptors.response.use(
 
     isRefreshing = true;
     try {
+      // เรียก refresh จาก store ที่คุณมีอยู่แล้ว (จะยิง axios ตัว authApi)
+      const { useAuthStore } = await import("@/store/auth");
+      const auth = useAuthStore.getState();
       const newToken = await auth.refreshToken();
       if (!newToken) throw new Error("Refresh failed");
 
-      // ใส่ token ทั้ง instance + request
+      // ใส่ token กลับเข้า instance + request ที่ค้างไว้
       instance.defaults.headers.common.Authorization = `Bearer ${newToken}`;
-      originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      if (originalRequest.headers) {
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      }
 
       processQueue(null, newToken);
       return instance(originalRequest);
     } catch (refreshErr) {
       processQueue(refreshErr, null);
-      await auth.logout(); // force logout
+      try {
+        const { useAuthStore } = await import("@/store/auth");
+        await useAuthStore.getState().logout();
+      } catch {}
       return Promise.reject(refreshErr);
     } finally {
       isRefreshing = false;

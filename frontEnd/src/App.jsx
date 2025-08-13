@@ -1,81 +1,63 @@
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { useAuthStore } from "./store/auth";
 import { Box, Flex, Spinner, Text } from "@chakra-ui/react";
 import { Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import { HomePage } from "./pages/HomePage";
-import { CreatePage } from "./pages/CreatePage";
-import { BlogDetail } from "./pages/BlogDetail";
+import { RequireAuth, RequireRole } from "@/components/Routes/Guards";
 import { Toaster } from "sonner";
-import { AllBlogs } from "@/pages/Blogs";
-import { MainLayout } from "./components/MainLayout";
-import { ProfilePage } from "./pages/Profilepage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import Dashboard from "./pages/Dashboard";
+import { AllBlogs } from "@/pages/Blog/Blogs";
+import { MainLayout } from "./components/layout/MainLayout";
+import { ProfilePage } from "./pages/User/Profilepage";
+import LoginPage from "./pages/Auth/LoginPage";
+import RegisterPage from "./pages/Auth/RegisterPage";
 import Unauthorized from "./pages/Authorization/Unauthorized";
 import NotFoundPage from "./pages/Authorization/์NotfoundPage";
-import FavoriteListPage from "./pages/FavoriteListPage";
-import { ManageBlogs } from "./pages/ManageBlogs";
-import ManageUserPage from "./pages/ManageUsers";
-import VerifyOtpLoginPage from "./pages/VerifyOtpLoginPage";
+import FavoriteListPage from "./pages/Blog/FavoriteListPage";
+import { ManageBlogs } from "./pages/BackOffice/ManageBlogs";
+import ManageUserPage from "./pages/BackOffice/ManageUsers";
+import VerifyOtpLoginPage from "./pages/Auth/VerifyOtpLoginPage";
+
+const BlogDetail = lazy(() => import("@/pages/Blog/BlogDetail"));
+const CreateBlog = lazy(() => import("@/pages/Blog/CreatePage"));
+const DashBoard = lazy(() => import("@/pages/BackOffice/Dashboard"));
+
+const PageSkeleton = () => <div style={{ padding: 24 }}>Loading…</div>;
 
 function App() {
-  const {
-    fetchUser,
-    isUserReady,
-    hasAttemptedAuth,
-    refreshToken,
-    isAuthenticated,
-    user,
-  } = useAuthStore();
+  const { isUserReady, isAuthenticated, user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    let cancelled = false;
+    const init = async () => {
+      // ใช้ local flag ช่วยกัน double-call
+      if (useAuthStore.getState().hasAttemptedAuth) return;
 
-    const initAuth = async () => {
-      const hasRefreshTokenCookie =
-        localStorage.getItem("hasRefreshToken") === "true";
-
-      if (!hasRefreshTokenCookie) {
-        useAuthStore.setState({
-          isUserReady: true,
-          hasAttemptedAuth: true,
-        });
-        return;
-      }
+      const hasRefresh = localStorage.getItem("hasRefreshToken") === "true";
 
       try {
-        const token = await refreshToken();
-        if (token) {
-          await fetchUser();
+        if (hasRefresh) {
+          // 1) ลองขอ access token เงียบ ๆ ก่อน
+          const token = await useAuthStore.getState().refreshToken();
+
+          // 2) ถ้าได้ token แล้วค่อยดึง /me
+          if (token) {
+            await useAuthStore.getState().fetchUser();
+          }
+        } else {
+          // ไม่มี refresh cookie ก็ถือว่า ready แต่เป็น guest
+          useAuthStore.setState({ isAuthenticated: false, user: null });
         }
-      } catch (err) {
-        console.error("❌ Refresh token failed:", err);
       } finally {
-        useAuthStore.setState({
-          isUserReady: true,
-          hasAttemptedAuth: true,
-        });
+        useAuthStore.setState({ isUserReady: true, hasAttemptedAuth: true });
       }
     };
 
-    if (!hasAttemptedAuth) {
-      initAuth();
-    } else {
-      useAuthStore.setState({ isUserReady: true });
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [hasAttemptedAuth]);
+    if (!useAuthStore.getState().hasAttemptedAuth) init();
+  }, []);
 
   useEffect(() => {
     if (!isUserReady) return;
-
-    // ถ้าอยู่หน้า verify-otp ให้ข้าม redirect
     if (location.pathname === "/verify-otp-login") return;
 
     if (isAuthenticated && user) {
@@ -108,18 +90,59 @@ function App() {
       <Routes>
         <Route element={<MainLayout />}>
           <Route index element={<HomePage />} />
-          <Route path="/create" element={<CreatePage />} />
-          <Route path="/blogs/:id" element={<BlogDetail />} />
+          <Route
+            path="/blogs/:id"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <BlogDetail />{" "}
+              </Suspense>
+            }
+          />
           <Route path="/blogs" element={<AllBlogs />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/verify-otp-login" element={<VerifyOtpLoginPage />} />
-          <Route path="/profile/:userId" element={<ProfilePage />} />
-          <Route path="/manage-blogs" element={<ManageBlogs />} />
-          <Route path="/manage-users" element={<ManageUserPage />} />
-          <Route path="/favorites" element={<FavoriteListPage />} />
+
+          <Route element={<RequireAuth />}>
+            <Route
+              path="/create"
+              element={
+                <Suspense fallback={<PageSkeleton />}>
+                  <CreateBlog />{" "}
+                </Suspense>
+              }
+            />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/:userId" element={<ProfilePage />} />
+            <Route path="/favorites" element={<FavoriteListPage />} />
+
+            <Route element={<RequireRole roles={["admin", "superadmin"]} />}>
+              <Route
+                path="/dashboard"
+                element={
+                  <Suspense fallback={<PageSkeleton />}>
+                    <DashBoard />{" "}
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/manage-blogs"
+                element={
+                  <Suspense fallback={<PageSkeleton />}>
+                    <ManageBlogs />{" "}
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/manage-users"
+                element={
+                  <Suspense fallback={<PageSkeleton />}>
+                    <ManageUserPage />{" "}
+                  </Suspense>
+                }
+              />
+            </Route>
+          </Route>
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
