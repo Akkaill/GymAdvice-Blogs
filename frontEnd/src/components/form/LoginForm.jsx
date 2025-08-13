@@ -13,11 +13,10 @@ import {
   InputRightElement,
   VStack,
   useToast,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
+  Text,
+  Divider,
 } from "@chakra-ui/react";
+import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import VerifyOTP from "./VerifyOTP";
 
 export default function LoginForm() {
@@ -48,18 +47,13 @@ export default function LoginForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-   
     setErrors({ email: "", password: "" });
     setLoginError("");
-
     if (!validate()) return;
 
     const res = await login(form.email, form.password);
 
-    // ❗ ถ้า login ไม่สำเร็จ → เช็กว่าต้อง OTP หรือไม่
     if (!res.success) {
-      // ❗ ถ้า require OTP → เด้งไปหน้า verify OTP
       if (res.requireVerification) {
         toast({
           title: "OTP Required",
@@ -68,39 +62,27 @@ export default function LoginForm() {
           duration: 5000,
           isClosable: true,
         });
-        navigate("/verify-otp-login", {
-          state: { email: form.email, password: form.password },
-        });
+        setOtpStep(true);
+        setOtpContact(form.email);
         return;
       }
-
-      // ❌ รหัสผิด หรือ error อื่น → แสดง error
-      setErrors({
-        email: "",
-        password: "Invalid email or password",
-      });
-
+      setErrors({ email: "", password: "Invalid email or password" });
       setLoginError(res.message || "Invalid email or password");
-
       toast({
         title: "Login Failed",
-        description: "Invalid email or password",
+        description: res.message || "Invalid email or password",
         status: "error",
         duration: 5000,
         isClosable: true,
       });
-
       return;
     }
 
     setLoginError("");
     setErrors({ email: "", password: "" });
-
-    if (res.user?.role === "admin" || res.user?.role === "superadmin") {
+    if (res.user?.role === "admin" || res.user?.role === "superadmin")
       navigate("/dashboard");
-    } else {
-      navigate("/");
-    }
+    else navigate("/");
   };
 
   if (otpStep) {
@@ -108,7 +90,6 @@ export default function LoginForm() {
       <VerifyOTP
         contact={otpContact}
         onSuccess={async () => {
-          // OTP ผ่านแล้ว ลอง login ใหม่
           const res = await login(form.email, form.password);
           if (res.success) {
             toast({
@@ -117,11 +98,9 @@ export default function LoginForm() {
               duration: 3000,
               isClosable: true,
             });
-            if (res.user?.role === "admin" || res.user?.role === "superadmin") {
+            if (res.user?.role === "admin" || res.user?.role === "superadmin")
               navigate("/dashboard");
-            } else {
-              navigate("/");
-            }
+            else navigate("/");
           }
         }}
       />
@@ -129,70 +108,96 @@ export default function LoginForm() {
   }
 
   return (
-    <Box
-      maxW="md"
-      mx="auto"
-      mt={12}
-      p={8}
-      bg="white"
-      boxShadow="lg"
-      borderRadius="md"
-    >
-      <Heading size="lg" mb={6} textAlign="center">
-        Welcome
-      </Heading>
+    <Box bg="#F8F7FF" minH="100vh" py={10} px={4}>
+      <Box
+        maxW="md"
+        mx="auto"
+        bg="white"
+        border="1px solid #EFEAFD"
+        rounded="2xl"
+        shadow="md"
+        overflow="hidden"
+      >
+        <Box
+          px={8}
+          py={6}
+          bgGradient="linear(to-r, #283E51, #485563, #2BC0E4)"
+          // purple.600 → blue.500
+          color="white"
+        >
+          <Heading size="lg" textAlign="center">
+            Welcome Back
+          </Heading>
+          <Text fontSize="sm" opacity={0.9} textAlign="center" mt={1}>
+            Log in to continue
+          </Text>
+        </Box>
 
-      <form onSubmit={handleSubmit}>
-        <VStack spacing={4}>
-          {/* Email */}
-          <FormControl isInvalid={!!errors.email} isRequired>
-            <FormLabel>Email</FormLabel>
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              value={form.email}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, email: e.target.value }))
-              }
-            />
-            <FormErrorMessage>{errors.email}</FormErrorMessage>
-          </FormControl>
+        <Box px={8} py={6}>
+          {loginError && (
+            <Text color="red.500" textAlign="center" mb={3}>
+              {loginError}
+            </Text>
+          )}
 
-          {/* Password */}
-          <FormControl isInvalid={!!errors.password} isRequired>
-            <FormLabel>Password</FormLabel>
-            <InputGroup>
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={form.password}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, password: e.target.value }))
-                }
-              />
-              <InputRightElement width="4.5rem">
-                <Button
-                  size="sm"
-                  h="1.5rem"
-                  onClick={() => setShowPassword((s) => !s)}
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </Button>
-              </InputRightElement>
-            </InputGroup>
-            <FormErrorMessage>{errors.password}</FormErrorMessage>
-          </FormControl>
+          <form onSubmit={handleSubmit}>
+            <VStack spacing={4} align="stretch">
+              <FormControl isInvalid={!!errors.email} isRequired>
+                <FormLabel>Email</FormLabel>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, email: e.target.value }))
+                  }
+                  borderColor="#EFEAFD"
+                />
+                <FormErrorMessage>{errors.email}</FormErrorMessage>
+              </FormControl>
 
-          <Button
-            type="submit"
-            isLoading={loading}
-            colorScheme="green"
-            width="full"
-          >
-            Login
-          </Button>
-        </VStack>
-      </form>
+              <FormControl isInvalid={!!errors.password} isRequired>
+                <FormLabel>Password</FormLabel>
+                <InputGroup>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Your password"
+                    value={form.password}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, password: e.target.value }))
+                    }
+                    borderColor="#EFEAFD"
+                  />
+                  <InputRightElement width="3rem">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPassword((s) => !s)}
+                    >
+                      {showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                    </Button>
+                  </InputRightElement>
+                </InputGroup>
+                <FormErrorMessage>{errors.password}</FormErrorMessage>
+              </FormControl>
+
+              <Divider />
+
+              <Button
+                type="submit"
+                isLoading={loading}
+                bgGradient="linear(to-r, #283E51, #485563, #2BC0E4)"
+                color="white"
+                _hover={{ opacity: 0.9 }}
+                height="48px"
+                rounded="xl"
+              >
+                Login
+              </Button>
+            </VStack>
+          </form>
+        </Box>
+      </Box>
     </Box>
   );
 }

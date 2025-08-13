@@ -1,4 +1,3 @@
-// src/components/button/FavoriteButton.jsx
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { IconButton, Tooltip } from "@chakra-ui/react";
 import { useMemo } from "react";
