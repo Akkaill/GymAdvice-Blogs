@@ -1,13 +1,13 @@
 import SecuritySettings from "../models/securitySetting.model.js";
 import { createLog } from "../utils/log.js";
 
-// ดู settings
+
 export const getSecuritySettings = async (req, res) => {
   const settings = await SecuritySettings.findOne();
   res.json({ success: true, settings });
 };
 
-//  อัปเดต settings
+
 export const updateSecuritySettings = async (req, res) => {
   const { registrationEnabled, maxLoginAttempts } = req.body;
 

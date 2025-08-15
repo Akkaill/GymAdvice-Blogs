@@ -33,13 +33,13 @@ export const SearchFilters = () => {
   const debouncedFetch = useCallback(
     debounce((delay) => {
       setSearch(delay);
-      resetBlogs(); // เคลียร์ state ก่อนดึงข้อมูลใหม่
-      fetchPaginatedBlogs(null); // ดึงใหม่ทุกครั้ง
+      resetBlogs(); 
+      fetchPaginatedBlogs(null); 
     }, 500),
     []
   );
   useEffect(() => {
-    setSearchTerm(search); // ถ้า state ถูก reset ข้างนอก เช่น route change
+    setSearchTerm(search); 
     console.log("🧠 sortBy:", sortBy, "order:", order);
     console.log("📦 blogs:", blogs);
   }, [search]);
@@ -59,8 +59,7 @@ export const SearchFilters = () => {
     console.log("Selected (direct):", selectedValue);
     const [newSort, newOrder] = selectedValue.split("|");
     setSortValue(selectedValue);
-    resetBlogs(); // reset
-    // บังคับให้ใช้ callback หรือทำให้แน่ใจว่า state update แล้วจริงๆ
+    resetBlogs(); 
     await new Promise((resolve) => {
       setTimeout(() => {
         setSort(newSort, newOrder);

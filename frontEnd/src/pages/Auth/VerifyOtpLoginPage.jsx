@@ -26,13 +26,12 @@ export default function VerifyOtpLoginPage() {
   const location = useLocation();
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-  // รับข้อมูล email/password มาจาก login page
+
   const { email, password } = location.state || {};
   const { login } = useAuthStore();
 
   useEffect(() => {
     if (!email || !password) {
-      // ถ้าไม่มีข้อมูล login ให้กลับไปหน้า login
       navigate("/login", { replace: true });
       return;
     }
@@ -45,7 +44,6 @@ export default function VerifyOtpLoginPage() {
 
   const handleVerify = async () => {
     try {
-      // ส่ง login พร้อม OTP
       const res = await login(email, password, otp);
       if (res.success) {
         toast({

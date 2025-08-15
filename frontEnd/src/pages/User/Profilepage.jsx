@@ -504,7 +504,7 @@ export function ProfilePage() {
                     )}
                   </HStack>
 
-                  {/* Meta row (optional place for tags/date) */}
+    
                   {b.createdAt && (
                     <Text mt={3} fontSize="xs" color={subtitleColor}>
                       {new Date(b.createdAt).toLocaleString()}

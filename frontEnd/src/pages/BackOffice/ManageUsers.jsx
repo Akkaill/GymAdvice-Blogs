@@ -1,4 +1,3 @@
-// src/pages/ManageUserPage.jsx
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { SearchUserFilter } from "@/components/search/SearchUserFilter";
 import { useAuthStore } from "@/store/auth";
@@ -43,7 +42,7 @@ export default function ManageUserPage() {
 
   const toast = useToast();
 
-  // สี/ธีมให้เข้ากับแนวสว่างของ Dashboard
+
   const pageBg = useColorModeValue("#F8F7FF", "gray.700");
   const tableBg = useColorModeValue("white", "gray.800");
   const headerBg = useColorModeValue("#F8F7FF", "gray.700");
@@ -54,9 +53,7 @@ export default function ManageUserPage() {
   const roleOptions = useMemo(() => ["user", "admin", "superadmin"], []);
 
   useEffect(() => {
-    // โหลดครั้งแรก
     fetchAllUsers?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRolePick = useCallback((userId, role) => {

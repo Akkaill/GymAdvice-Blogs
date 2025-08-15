@@ -1,6 +1,6 @@
 import Log from "../models/log.model.js";
 
-// GET: ดู log ทั้งหมด พร้อมค้นหา
+
 export const getLogs = async (req, res) => {
   const { action, userId } = req.query;
   const filter = {};
@@ -19,7 +19,7 @@ export const getLogs = async (req, res) => {
   }
 };
 
-// DELETE: ลบ log ทั้งหมด 
+
 export const deleteAllLogs = async (req, res) => {
   try {
     await Log.deleteMany();
@@ -29,7 +29,7 @@ export const deleteAllLogs = async (req, res) => {
   }
 };
 
-// DELETE: ลบ log ทีละอัน
+
 export const deleteLogById = async (req, res) => {
   const { logId } = req.params;
 

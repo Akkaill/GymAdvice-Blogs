@@ -7,12 +7,10 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // อัพเดต state เพื่อแสดง fallback UI
     return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error ที่เกิดขึ้นให้ดูใน console
     console.error("💥 Caught by ErrorBoundary:", error, errorInfo);
   }
 

@@ -37,15 +37,11 @@ function App() {
 
       try {
         if (hasRefresh) {
-          // 1) ลองขอ access token เงียบ ๆ ก่อน
           const token = await useAuthStore.getState().refreshToken();
-
-          // 2) ถ้าได้ token แล้วค่อยดึง /me
           if (token) {
             await useAuthStore.getState().fetchUser();
           }
         } else {
-          // ไม่มี refresh cookie ก็ถือว่า ready แต่เป็น guest
           useAuthStore.setState({ isAuthenticated: false, user: null });
         }
       } finally {

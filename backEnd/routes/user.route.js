@@ -34,11 +34,11 @@ export const authLimiter = rateLimit({
 
 export const strictLoginLimiter = rateLimit({
   windowMs: 60 * 1000,
-  limit: isProd ? 10 : 1000, // login เอาเข้มหน่อย
+  limit: isProd ? 10 : 1000, 
   standardHeaders: true,
   legacyHeaders: false,
 });
-// Public
+
 router.post("/pre-register", preRegister);
 router.post("/verify-register", verifyRegister);
 router.post("/login", strictLoginLimiter, login);

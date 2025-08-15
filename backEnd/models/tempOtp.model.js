@@ -15,6 +15,5 @@ const tempOtpSchema = new mongoose.Schema(
 );
 
 
-// เช็ก model ซ้ำเพื่อป้องกัน hot-reload ซ้อน
 const TempOtp = mongoose.models.TempOtp || mongoose.model("TempOtp", tempOtpSchema);
 export default TempOtp;

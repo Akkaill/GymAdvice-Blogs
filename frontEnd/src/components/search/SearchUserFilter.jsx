@@ -36,7 +36,7 @@ export const SearchUserFilter = () => {
       : "createdAt|desc"
   );
 
-  // สีสำหรับพื้นหลัง input และ dropdown
+
   const inputBg = useColorModeValue("white", "gray.700");
   const inputColor = useColorModeValue("gray.700", "white");
   const placeholderColor = useColorModeValue("gray.400", "gray.400");
@@ -44,7 +44,7 @@ export const SearchUserFilter = () => {
   const dropdownBg = useColorModeValue("white", "gray.800");
   const dropdownColor = useColorModeValue("gray.700", "white");
 
-  // debounce search
+ 
   const debouncedFetch = useCallback(
     debounce((value) => {
       setSearchUser(value);

@@ -8,7 +8,6 @@ import TempOtp from "../models/tempOtp.model.js";
 import { sendEmailOTP } from "../utils/sendEmailOTP.js";
 import { sendSMSOTP } from "../utils/sendSMSOTP.js";
 
-// สร้าง Access Token
 const createAccessToken = (user) => {
   return jwt.sign(
     { id: user._id, tokenVersion: user.tokenVersion },
@@ -17,7 +16,6 @@ const createAccessToken = (user) => {
   );
 };
 
-// สร้าง Refresh Token
 const createRefreshToken = (user) => {
   return jwt.sign(
     { id: user._id, tokenVersion: user.tokenVersion },
@@ -36,12 +34,11 @@ const sendRefreshCookie = (res, token) => {
   });
 };
 
-// ดึงผู้ใช้ทั้งหมด (admin only)
 export const getAllUsers = async (req, res) => {
   try {
     const search = req.query.search || "";
     const sortBy = req.query.sortBy || "createdAt";
-    const order = req.query.order === "asc" ? 1 : -1; // asc=1, desc=-1
+    const order = req.query.order === "asc" ? 1 : -1;
 
     const query = search ? { username: { $regex: search, $options: "i" } } : {};
 
@@ -123,8 +120,6 @@ export const verifyRegister = async (req, res) => {
     });
 
     await newUser.save();
-
-    // ลบ TempOtp หลังสร้าง user สำเร็จ
     await TempOtp.deleteOne({ _id: temp._id });
 
     return res.json({
@@ -279,7 +274,7 @@ export const refreshToken = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  const user = req.user; // จาก protect
+  const user = req.user;
   if (!user) {
     return res.status(401).json({ success: false, message: "No user session" });
   }
@@ -300,7 +295,6 @@ export const logout = async (req, res) => {
   try {
     let userId = req.user?._id;
 
-    // ถ้าไม่มี req.user ให้ลองอ่านจาก refresh cookie
     if (!userId && req.cookies?.jid) {
       try {
         const payload = jwt.verify(
@@ -308,9 +302,7 @@ export const logout = async (req, res) => {
           process.env.JWT_REFRESH_SECRET
         );
         userId = payload?.id;
-      } catch (e) {
-        // cookie ผิดก็ข้าม
-      }
+      } catch (e) {}
     }
 
     if (userId) {
@@ -326,7 +318,6 @@ export const logout = async (req, res) => {
   } catch (err) {
     console.error("Logout Error:", err.message);
   } finally {
-    // ต้องลบด้วย path ให้ตรงกับตอนตั้ง
     res.clearCookie("jid", {
       httpOnly: true,
       secure: isProd,
@@ -386,7 +377,6 @@ export const resendOTP = async (req, res) => {
   const lastSent = user.tempContactInfo?.lastOtpSentAt;
   const now = new Date();
 
-  //เช็ค delay 30 วินาที
   if (lastSent && now - lastSent < 30 * 1000) {
     const wait = Math.ceil((30 * 1000 - (now - lastSent)) / 1000);
     return res.status(429).json({
@@ -396,9 +386,8 @@ export const resendOTP = async (req, res) => {
     });
   }
 
-  // สร้างใหม่และส่ง
-  const otp = generateOTP(); // random 6 digit
-  await TempOtp.deleteMany({ userId }); // ล้างเก่า
+  const otp = generateOTP();
+  await TempOtp.deleteMany({ userId });
 
   await TempOtp.create({
     userId,

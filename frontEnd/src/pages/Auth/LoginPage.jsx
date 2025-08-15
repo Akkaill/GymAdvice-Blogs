@@ -5,7 +5,7 @@ import { MdOutlineKeyboardArrowLeft } from "react-icons/md";
 import { Link } from "react-router-dom";
 import LoginForm from "@/components/form/LoginForm";
 
-const NAV_OFFSET = 88; // ชดเชยความสูง navbar (ปรับตามจริงได้)
+const NAV_OFFSET = 88; 
 
 const BackFab = () => (
   <Box position="fixed" top={`${NAV_OFFSET}px`} left="16px" zIndex={1100}>

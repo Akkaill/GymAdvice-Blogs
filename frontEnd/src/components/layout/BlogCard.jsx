@@ -47,7 +47,6 @@ const makeGradient = (key) => {
   return `linear-gradient(135deg, ${c1}, ${c2} 55%, ${c3})`;
 };
 
-/** hook ตรวจจับโหลดรูป + error สำหรับทำ blur-up / fallback */
 function useImageStatus(src) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
@@ -55,7 +54,7 @@ function useImageStatus(src) {
 
   useEffect(() => {
     if (!src) return;
-    if (lastSrc.current === src && loaded) return; // ไม่โหลดซ้ำ
+    if (lastSrc.current === src && loaded) return;
     setLoaded(false);
     setErrored(false);
     lastSrc.current = src;
@@ -68,9 +67,7 @@ function useImageStatus(src) {
     img.onerror = () => setErrored(true);
     img.src = src;
 
-    return () => {
-      // ยกเลิกอ้างอิงเพื่อ GC
-    };
+    return () => {};
   }, [src]);
 
   return { loaded, errored };
@@ -84,14 +81,19 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
   const isManagePage = location.pathname === "/manage-blogs";
   const reduced = usePrefersReducedMotion();
 
-  const cardBg = useColorModeValue("rgba(255,255,255,0.7)", "rgba(17,24,39,0.6)");
-  const borderCol = useColorModeValue("rgba(255,255,255,0.35)", "rgba(255,255,255,0.15)");
+  const cardBg = useColorModeValue(
+    "rgba(255,255,255,0.7)",
+    "rgba(17,24,39,0.6)"
+  );
+  const borderCol = useColorModeValue(
+    "rgba(255,255,255,0.35)",
+    "rgba(255,255,255,0.15)"
+  );
   const hoverShadow = useColorModeValue("2xl", "dark-lg");
   const titleColor = useColorModeValue("gray.800", "gray.100");
   const subColor = useColorModeValue("gray.600", "gray.300");
   const ctaColor = useColorModeValue("blue.600", "blue.300");
 
-  // ใช้ title/url ทำ gradient placeholder (ไม่ต้องพึ่ง cloud)
   const placeholder = useMemo(
     () => makeGradient(blog.title || blog.image || blog._id || "placeholder"),
     [blog.title, blog.image, blog._id]
@@ -99,7 +101,6 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
 
   const { loaded, errored } = useImageStatus(blog.image);
 
-  // ถ้าโหลดพลาด ให้ใช้ fallback icon-style block
   const showImage = !!blog.image && !errored;
 
   return (
@@ -114,12 +115,15 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
       rounded="2xl"
       overflow="hidden"
       transition="transform 0.25s ease, box-shadow 0.25s ease"
-      _hover={!reduced ? { transform: "translateY(-4px)", boxShadow: hoverShadow } : undefined}
+      _hover={
+        !reduced
+          ? { transform: "translateY(-4px)", boxShadow: hoverShadow }
+          : undefined
+      }
       _focusWithin={{ boxShadow: hoverShadow }}
       willChange={!reduced ? "transform" : undefined}
       minH="340px"
     >
-      {/* Image/Placeholder Section – lock aspect ratio ป้องกัน layout shift */}
       <AspectRatio ratio={16 / 9}>
         <Box position="relative">
           {/* Placeholder gradient */}
@@ -131,7 +135,6 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
             opacity={loaded && showImage ? 0 : 1}
           />
 
-          {/* Main image + blur-up เมื่อยังโหลดไม่เสร็จ */}
           <Skeleton isLoaded={loaded || !showImage} fadeDuration={0.2}>
             {showImage ? (
               <Box
@@ -148,12 +151,10 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
                 }}
                 loading="lazy"
                 decoding="async"
-                // ให้ browser ตัดสินใจโหลดแบบเบา ๆ (ถ้าอยู่ viewport จะเร่ง)
                 fetchpriority="low"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              // กรณี error: แทนด้วยบล็อกสี +ไอคอน (ย่อ ๆ ด้วย emoji)
               <Box
                 width="100%"
                 height="100%"
@@ -186,13 +187,21 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
           </LinkOverlay>
         </Heading>
 
-        <Text fontWeight="medium" fontSize="sm" color={subColor} mb={4} noOfLines={2}>
+        <Text
+          fontWeight="medium"
+          fontSize="sm"
+          color={subColor}
+          mb={4}
+          noOfLines={2}
+        >
           {blog.subtitle}
         </Text>
 
         {/* Actions */}
         <HStack justifyContent="space-between" spacing={3}>
-          {!isManagePage && !isFavoritePage && <FavoriteButton blogId={blog._id} />}
+          {!isManagePage && !isFavoritePage && (
+            <FavoriteButton blogId={blog._id} />
+          )}
 
           {isManagePage && showDelete && (
             <IconButton
@@ -201,7 +210,11 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
               size="sm"
               variant="ghost"
               onClick={() => onDelete?.(blog._id)}
-              _hover={!reduced ? { transform: "translateY(-2px)", color: "red.500" } : { color: "red.500" }}
+              _hover={
+                !reduced
+                  ? { transform: "translateY(-2px)", color: "red.500" }
+                  : { color: "red.500" }
+              }
               _active={{ transform: "translateY(0px)" }}
             />
           )}
@@ -229,7 +242,6 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
   );
 }
 
-/** ลด re-render: เทียบเฉพาะฟิลด์ที่มีผลกับ UI จริง ๆ */
 const areEqual = (prev, next) => {
   const a = prev.blog || {};
   const b = next.blog || {};

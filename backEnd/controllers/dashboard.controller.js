@@ -45,7 +45,7 @@ export const getRecentLogs = async (req, res) => {
   }
 };
 
-// จำนวน Blog ต่อวัน
+
 export const getBlogsPerDay = async (req, res) => {
   try {
     const result = await Blog.aggregate([
@@ -67,7 +67,7 @@ export const getBlogsPerDay = async (req, res) => {
   }
 };
 
-// จำนวน Logins ต่อวัน
+
 export const getLoginsPerDay = async (req, res) => {
   try {
     const result = await Log.aggregate([

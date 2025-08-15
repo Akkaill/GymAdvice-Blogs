@@ -72,7 +72,6 @@ export const HomePage = () => {
               />
             </Box>
 
-            {/* Filters (บนการ์ด + sticky เบาๆ) */}
             <Box
               position="sticky"
               top={{ base: 2, md: 4 }}

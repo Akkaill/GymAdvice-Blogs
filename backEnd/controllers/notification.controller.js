@@ -6,6 +6,7 @@ export const getNotifications = async (req, res) => {
     .limit(5);
   res.json({ success: true, data: notis });
 };
+
 export const markAsRead = async (req, res) => {
   const { id } = req.params;
   await Notification.findByIdAndUpdate(id, { read: true });

@@ -20,7 +20,7 @@ export const useDashboardStore = create((set, get) => ({
   skip: 0,
   limit: 10,
 
-  // --- ดึงสถิติ ---
+
   fetchStats: async () => {
     if (get().loadingStats) return;
     set({ loadingStats: true, errorStats: null });
@@ -62,7 +62,7 @@ export const useDashboardStore = create((set, get) => ({
       });
     }
   },
-  // --- ดึง logs ล่าสุด ---
+
   fetchRecentLogs: async () => {
     if (get().loadingLogs) return;
     set({ loadingLogs: true, errorLogs: null });
@@ -77,7 +77,7 @@ export const useDashboardStore = create((set, get) => ({
     }
   },
 
-  // --- ดึง Users (เฉพาะ admin/superadmin) ---
+
   fetchUsers: async () => {
     if (get().loadingUsers) return;
     set({ loadingUsers: true, errorUsers: null });
@@ -92,7 +92,7 @@ export const useDashboardStore = create((set, get) => ({
     }
   },
 
-  // --- Update Role ---
+ 
   updateUserRole: async (userId, role) => {
     try {
       await axios.put(`${API}/superadmin/update-role/${userId}`, { role });
@@ -104,7 +104,7 @@ export const useDashboardStore = create((set, get) => ({
     }
   },
 
-  // --- Delete User ---
+  
   deleteUser: async (userId) => {
     try {
       await axios.delete(`${API}/superadmin/delete-user/${userId}`);
@@ -132,7 +132,6 @@ export const useDashboardStore = create((set, get) => ({
         username,
         password,
       });
-      // หลังสร้าง admin ให้ fetch users ใหม่
       await get().fetchUsers();
     } catch (error) {
       console.error("Failed to create admin", error);

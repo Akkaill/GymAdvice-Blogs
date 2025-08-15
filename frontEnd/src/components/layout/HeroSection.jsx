@@ -15,7 +15,6 @@ export const HeroSection = () => {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
-  // ข้อความที่ใช้ทั้งโหมดปกติ/ลดการเคลื่อนไหว
   const staticTagline =
     "Here you'll find effective fitness advice to reach your goals. Eat clean. Train hard. Build the physique you want.";
 

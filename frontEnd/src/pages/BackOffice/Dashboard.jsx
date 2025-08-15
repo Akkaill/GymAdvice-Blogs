@@ -124,7 +124,7 @@ export default function Dashboard() {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Safe guards
+
   const safeStats = {
     users: stats?.users ?? 0,
     admins: Array.isArray(stats?.admins)

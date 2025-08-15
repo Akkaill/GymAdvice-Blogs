@@ -82,14 +82,14 @@ export default function BlogDetail() {
     [blog?.title, blog?.image, id]
   );
 
-  // styles
+ 
   const cardBg = useColorModeValue("white", "gray.900");
   const borderCol = useColorModeValue("gray.200", "whiteAlpha.200");
   const titleColor = useColorModeValue("gray.900", "gray.100");
   const subColor = useColorModeValue("gray.600", "gray.300");
   const textColor = useColorModeValue("gray.800", "gray.200");
 
-  // Early returns
+
   if (loading) {
     return (
       <Container maxW="container.md" py={10}>
@@ -149,7 +149,7 @@ export default function BlogDetail() {
     ? new Date(blog.createdAt).toLocaleString()
     : "";
 
-  // share/copy
+
   const onCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -347,4 +347,4 @@ export default function BlogDetail() {
       </VStack>
     </Container>
   );
-}
+} 

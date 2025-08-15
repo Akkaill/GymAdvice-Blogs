@@ -108,7 +108,7 @@ export const useAuthStore = create((set, get) => ({
 
       if (res.requireVerification) {
         return {
-          success: false, // ยังไม่สำเร็จ แต่แจ้งว่า OTP ก่อน
+          success: false, 
           requireVerification: true,
           message: res.data.message,
         };
@@ -161,7 +161,6 @@ export const useAuthStore = create((set, get) => ({
         set({ user, isUserReady: true, isAuthenticated: !!user });
         return user;
       } catch (err) {
-        // ไม่ต้องสรุปว่า fail ทันที — ให้สถานะ ready แต่ unauth ได้
         console.error("Fetch user failed:", err?.response?.data || err.message);
         set({ isUserReady: true, isAuthenticated: false, user: null });
         return null;
@@ -284,8 +283,6 @@ export const useAuthStore = create((set, get) => ({
       set({ loading: false });
     }
   },
-
-  // ตรวจซ้ำ (email, username, phone)
 
   checkDuplicate: async (payload) => {
     try {

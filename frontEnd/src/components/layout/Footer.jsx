@@ -8,25 +8,19 @@ import {
   Link as CLink,
   IconButton,
   HStack,
-  VStack,
-  Input,
-  InputGroup,
-  InputRightElement,
   Button,
   Divider,
   useColorModeValue,
   Tooltip,
-  Badge,
   Flex,
   useToast,
 } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
 import { FaGithub, FaTwitter, FaLinkedin } from "react-icons/fa";
 import { GiBiceps } from "react-icons/gi";
-import {FiArrowUpRight } from "react-icons/fi";
+import { FiArrowUpRight } from "react-icons/fi";
 
 const Footer = () => {
-  const toast = useToast();
   const bg = useColorModeValue("gray.50", "gray.900");
   const fg = useColorModeValue("gray.700", "gray.300");
   const heading = useColorModeValue("gray.900", "white");
@@ -51,7 +45,7 @@ const Footer = () => {
         right="-120px"
         w="320px"
         h="320px"
-       bgGradient="linear(to-tr,gray.200,gray.500,gray.900)"
+        bgGradient="linear(to-tr,gray.200,gray.500,gray.900)"
         filter="blur(40px)"
         opacity={0.25}
       />
@@ -62,13 +56,12 @@ const Footer = () => {
         left="-140px"
         w="360px"
         h="360px"
-      bgGradient="linear(to-tr,gray.200,gray.500,gray.900)"
+        bgGradient="linear(to-tr,gray.200,gray.500,gray.900)"
         filter="blur(50px)"
         opacity={0.2}
       />
 
       {/* Accent gradient bar */}
-    
 
       <Container maxW="7xl" px={{ base: 4, md: 8 }} py={{ base: 10, md: 14 }}>
         <SimpleGrid
@@ -82,7 +75,7 @@ const Footer = () => {
               <Text
                 fontWeight="extrabold"
                 fontSize="xl"
-                bgColor={'blackAlpha.800'}
+                bgColor={"blackAlpha.800"}
                 bgClip="text"
               >
                 Gym Advice

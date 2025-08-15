@@ -3,7 +3,6 @@ import Blog from "../models/blogs.model.js";
 import cloudinary from "../utils/cloudinary.js";
 import fs from "fs";
 
-// GET /profile → ดึงข้อมูล user + blogs ของตัวเอง
 export const getMyProfile = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -26,7 +25,6 @@ export const getMyProfile = async (req, res) => {
   }
 };
 
-// PUT /profile/username → แก้ไข username
 export const updateUserInfo = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -46,12 +44,12 @@ export const updateUserInfo = async (req, res) => {
 
     res.json({ message: "User info updated", user });
   } catch (err) {
-    res.status(500).json({ message: "Failed to update info", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to update info", error: err.message });
   }
 };
 
-
-// PUT /profile/avatar → อัปโหลด / เปลี่ยน avatar
 export const updateAvatar = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -86,7 +84,6 @@ export const updateAvatar = async (req, res) => {
   }
 };
 
-// DELETE /profile/avatar → ลบ avatar
 export const deleteAvatar = async (req, res) => {
   try {
     const userId = req.user._id;

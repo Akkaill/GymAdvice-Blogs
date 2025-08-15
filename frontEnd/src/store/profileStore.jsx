@@ -7,7 +7,6 @@ export const useProfileStore = create((set, get) => ({
   loading: false,
   error: null,
 
-  // โหลดข้อมูล profile (user + blogs)
   fetchProfile: async () => {
     set({ loading: true, error: null });
     try {
@@ -24,19 +23,19 @@ export const useProfileStore = create((set, get) => ({
       });
     }
   },
- fetchProfileById : async (userId) => {
-  try {
-    setLoading(true);
-    const res = await axios.get(`/users/${userId}`);
-    setUser(res.data);
-    await fetchUserBlogs(userId);
-  } catch (error) {
-    setError(error.message);
-  } finally {
-    setLoading(false);
-  }
-},
 
+  fetchProfileById: async (userId) => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`/users/${userId}`);
+      setUser(res.data);
+      await fetchUserBlogs(userId);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  },
 
   updateUserInfo: async ({ username, instagram }) => {
     if ((!username || !username.trim()) && (!instagram || !instagram.trim())) {
@@ -53,7 +52,6 @@ export const useProfileStore = create((set, get) => ({
         withCredentials: true,
       });
 
-      // อัปเดต user state ใหม่ด้วยข้อมูลที่ได้จาก response หรือที่ส่งไป
       set((state) => ({
         user: {
           ...state.user,
@@ -72,7 +70,6 @@ export const useProfileStore = create((set, get) => ({
     }
   },
 
-  // อัปโหลด avatar
   uploadAvatar: async (file) => {
     if (!file) {
       set({ error: "No file provided" });
@@ -86,7 +83,6 @@ export const useProfileStore = create((set, get) => ({
         withCredentials: true,
         headers: { "Content-Type": "multipart/form-data" },
       });
-      // โหลดข้อมูล user ใหม่ (avatar update)
       await get().fetchProfile();
       set({ loading: false });
       return true;
@@ -117,7 +113,6 @@ export const useProfileStore = create((set, get) => ({
     }
   },
 
-  // ลบ avatar
   deleteAvatar: async () => {
     set({ loading: true, error: null });
     try {

@@ -1,4 +1,3 @@
-// controllers/admin.controller.js
 export const someAdminController = (req, res) => {
   res.json({
     success: true,
