@@ -29,7 +29,6 @@ export const useProfileStore = create((set, get) => ({
     setLoading(true);
     const res = await axios.get(`/users/${userId}`);
     setUser(res.data);
-    // โหลดบล็อกของ userId ด้วย
     await fetchUserBlogs(userId);
   } catch (error) {
     setError(error.message);

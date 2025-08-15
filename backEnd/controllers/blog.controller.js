@@ -81,7 +81,7 @@ export const getBlogById = async (req, res) => {
   const { id } = req.params;
   try {
     const blog = await Blog.findById(id)
-      .populate("authorName", "username _id")
+      .populate("authorName", "username _id role avatar")
       .populate({
         path: "favoritedBy",
         select: "_id",
@@ -137,6 +137,7 @@ export const createBlog = async (req, res) => {
       .json({ success: false, message: "Server error: Failed to create blog" });
   }
 };
+
 export const updateBlog = async (req, res) => {
   const blogId = req.params.id;
   const updates = req.body;

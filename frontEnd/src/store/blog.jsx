@@ -37,7 +37,6 @@ export const useBlogStore = create((set, get) => ({
     set({ sortBy, order, blogs: [], nextCursor: null, hasMore: true }),
 
  
-   //Paginated fetch
   fetchPaginatedBlogs: async (cursor = null, limit = 6) => {
     const { search, sortBy, order } = get();
     set({ loading: true });

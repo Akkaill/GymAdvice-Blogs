@@ -199,7 +199,6 @@ export const login = async (req, res) => {
       });
     }
 
-     
     const record = await await TempOtp.findOneAndUpdate(
       { userId: user._id },
       {
@@ -222,7 +221,6 @@ export const login = async (req, res) => {
         message: "Invalid or expired OTP",
       });
     }
-
 
     await TempOtp.deleteMany({ userId: user._id });
     user.failedLoginAttempts = 0;
@@ -298,28 +296,45 @@ export const getMe = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
+  const isProd = process.env.NODE_ENV === "production";
   try {
-    if (!req.user?._id) {
-      console.warn("No user found in request");
-    } else {
-      const user = await User.findById(req.user._id);
-      if (user) {
-        user.tokenVersion += 1; // revoke tokens
-        await user.save();
-        await createLog("Logout", req.user._id, "User logged out");
+    let userId = req.user?._id;
+
+    // ถ้าไม่มี req.user ให้ลองอ่านจาก refresh cookie
+    if (!userId && req.cookies?.jid) {
+      try {
+        const payload = jwt.verify(
+          req.cookies.jid,
+          process.env.JWT_REFRESH_SECRET
+        );
+        userId = payload?.id;
+      } catch (e) {
+        // cookie ผิดก็ข้าม
       }
+    }
+
+    if (userId) {
+      const user = await User.findById(userId);
+      if (user) {
+        user.tokenVersion = (user.tokenVersion || 0) + 1; // revoke ทั้งชุด
+        await user.save();
+        await createLog("Logout", user._id, "User logged out");
+      }
+    } else {
+      console.warn("Logout: no user resolvable (no req.user and bad cookie)");
     }
   } catch (err) {
     console.error("Logout Error:", err.message);
   } finally {
+    // ต้องลบด้วย path ให้ตรงกับตอนตั้ง
     res.clearCookie("jid", {
       httpOnly: true,
-      sameSite: "Lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: isProd,
+      sameSite: isProd ? "None" : "Lax",
+      path: "/api/users/refresh-token",
     });
+    return res.json({ success: true, message: "Logged out successfully" });
   }
-
-  return res.json({ success: true, message: "Logged out successfully" });
 };
 
 export const updateUserPassword = async (req, res) => {

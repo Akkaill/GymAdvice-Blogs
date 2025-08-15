@@ -1,5 +1,9 @@
 import { create } from "zustand";
 import axios from "../utils/axios";
+import {
+  refreshToken as refreshTokenApi,
+  logout as logoutApi,
+} from "../utils/authApi";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -17,6 +21,8 @@ export const useAuthStore = create((set, get) => ({
   sortUserBy: "createdAt",
   sortUserOrder: "desc",
   loadingUsers: false,
+  fetchUserPromise: null,
+  refreshPromise: null,
 
   setSearchUser: (term) => set({ searchUser: term }),
   setSortUser: (sortBy, order) =>
@@ -145,33 +151,43 @@ export const useAuthStore = create((set, get) => ({
   },
 
   fetchUser: async () => {
-    try {
-      const res = await axios.get("/users/me", { withCredentials: true });
-      const user = res.data?.user || null;
-      set({
-        user,
-        isUserReady: true,
-        isAuthenticated: !!user,
-      });
-      return user;
-    } catch (err) {
-      console.error(
-        "Fetch user failed:",
-        err.response?.data?.message || err.message
-      );
-      // ไม่เรียก refreshToken อีก → axios interceptor จะดูแลให้
-      set({ isUserReady: true, isAuthenticated: false, user: null });
-      return null;
-    }
+    const { fetchUserPromise } = get();
+    if (fetchUserPromise) return fetchUserPromise;
+
+    const p = (async () => {
+      try {
+        const res = await axios.get("/users/me", { withCredentials: true });
+        const user = res?.data?.user || null;
+        set({ user, isUserReady: true, isAuthenticated: !!user });
+        return user;
+      } catch (err) {
+        // ไม่ต้องสรุปว่า fail ทันที — ให้สถานะ ready แต่ unauth ได้
+        console.error("Fetch user failed:", err?.response?.data || err.message);
+        set({ isUserReady: true, isAuthenticated: false, user: null });
+        return null;
+      } finally {
+        set({ fetchUserPromise: null });
+      }
+    })();
+
+    set({ fetchUserPromise: p });
+    return p;
   },
 
   refreshToken: async () => {
+    const { refreshPromise } = get();
     try {
-      const res = await axios.post(
-        `${API}/users/refresh-token`,
-        {},
-        { withCredentials: true }
-      );
+      if (refreshPromise) {
+        const res = await refreshPromise;
+        return res?.data?.accessToken || null;
+      }
+
+      const p = refreshTokenApi();
+      set({ refreshPromise: p });
+
+      const res = await p;
+      set({ refreshPromise: null });
+
       if (!res.data?.success) {
         set({
           user: null,
@@ -196,7 +212,6 @@ export const useAuthStore = create((set, get) => ({
         return accessToken;
       }
 
-      // ⚠️ ไม่มี token
       set({
         user: null,
         token: null,
@@ -207,15 +222,16 @@ export const useAuthStore = create((set, get) => ({
       delete axios.defaults.headers.common.Authorization;
       return null;
     } catch (err) {
+      set({ refreshPromise: null });
       console.warn(
-        "🟠 refreshToken failed (may be no jid):",
-        err.response?.data?.message || err.message
+        "🟠 refreshToken failed:",
+        err?.response?.data?.message || err.message
       );
       set({
         user: null,
         token: null,
         isAuthenticated: false,
-        isUserReady: true, // ให้หยุดหมุน
+        isUserReady: true,
         hasAttemptedAuth: true,
       });
       delete axios.defaults.headers.common.Authorization;
@@ -225,7 +241,7 @@ export const useAuthStore = create((set, get) => ({
 
   logout: async () => {
     try {
-      await axios.post(`${API}/users/logout`, {}, { withCredentials: true });
+      await logoutApi();
       localStorage.removeItem("hasRefreshToken");
     } catch (err) {
       console.warn("Logout API error:", err.message);
