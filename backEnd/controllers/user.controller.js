@@ -8,6 +8,7 @@ import TempOtp from "../models/tempOtp.model.js";
 import { sendEmailOTP } from "../utils/sendEmailOTP.js";
 import { sendSMSOTP } from "../utils/sendSMSOTP.js";
 
+const isProd = process.env.NODE_ENV === "production";
 const createAccessToken = (user) => {
   return jwt.sign(
     { id: user._id, tokenVersion: user.tokenVersion },
@@ -24,11 +25,11 @@ const createRefreshToken = (user) => {
   );
 };
 
-const sendRefreshCookie = (res, token) => {
+export const sendRefreshCookie = (res, token) => {
   res.cookie("jid", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProd,
+    sameSite: isProd ? "None" : "Lax",
     path: "/api/users/refresh-token",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
@@ -415,63 +416,71 @@ export const resendOTP = async (req, res) => {
   res.json({ success: true, message: "OTP resent successfully" });
 };
 
-export const resendTempOTP = async (req, res) => {
-  const { contact } = req.body;
+export const resendTempOTP = async (req, res, next) => {
+  try {
+    const { email, phone } = req.body;
+    if (!email && !phone)
+      return res.status(400).json({ message: "email or phone required" });
 
-  if (!contact)
-    return res
-      .status(400)
-      .json({ success: false, message: "Contact is required" });
+    const existingTemp = await TempOtp.findOne(email ? { email } : { phone });
+    if (!existingTemp)
+      return res.status(404).json({ message: "No pre-register found" });
 
-  const query = contact.includes("@") ? { email: contact } : { phone: contact };
-
-  const existingTemp = await TempOtp.findOne(query);
-  if (!existingTemp)
-    return res
-      .status(404)
-      .json({ success: false, message: "No pending registration found" });
-
-  const now = new Date();
-  const lastSent = existingTemp.updatedAt;
-
-  if (now - lastSent < 30 * 1000) {
-    const wait = Math.ceil((30 * 1000 - (now - lastSent)) / 1000);
-    return res.status(429).json({
-      success: false,
-      message: `Please wait ${wait}s before resending OTP`,
+    const { otp, expiresAt } = await upsertTempOtp({
+      email,
+      phone,
+      tempData: existingTemp.tempData,
     });
+
+    await sendOTP({
+      email,
+      phone,
+      otp,
+      extra: {
+        username: existingTemp.tempData?.username,
+      },
+    });
+
+    res.json({ message: "OTP resent" });
+  } catch (err) {
+    next(err);
   }
-
-  await sendOTP(null, existingTemp.email, existingTemp.phone, {
-    extra: {
-      username: existingTemp.username,
-      password: existingTemp.password,
-    },
-  });
-
-  res.json({ success: true, message: "OTP resent successfully" });
 };
 
-export const verifyOTP = async (req, res) => {
-  const { otp } = req.body;
-  const record = await TempOtp.findOne({ otp });
-  if (!record || record.expiresAt < new Date()) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid or expire OTP",
+export const verifyOTP = async (req, res, next) => {
+  try {
+    const { otp, email, phone, userId } = req.body;
+    if (!otp || (!email && !phone && !userId))
+      return res
+        .status(400)
+        .json({ message: "otp + (email|phone|userId) required" });
+
+    const query = {};
+    if (userId) query.userId = userId;
+    if (email) query.email = email;
+    if (phone) query.phone = phone;
+    query.otp = otp;
+
+    const record = await TempOtp.findOne(query);
+    if (!record) return res.status(400).json({ message: "Invalid OTP" });
+    if (record.expiresAt < new Date()) {
+      await record.deleteOne();
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    const targetUserId = record.userId;
+    if (!targetUserId)
+      return res.status(400).json({ message: "OTP not linked to user" });
+
+    await User.findByIdAndUpdate(targetUserId, {
+      $set: { failedLoginAttempts: 0, lockedUntil: null },
     });
+
+    await record.deleteOne();
+    return res.json({ message: "OTP verified" });
+  } catch (err) {
+    next(err);
   }
-  const user = await User.findById(record.userId);
-  if (!user) {
-    return res.status(404).json({ success: false, message: "User not found" });
-  }
-  await TempOtp.deleteMany({ userId: user._id });
-  user.tempContactInfo = {};
-  user.lockedUntil = null;
-  user.failedLoginAttempts = 0;
-  await user.save();
-  await createLog("otp_verified", user._id, "OTP verified successfully");
-  return res.json({ success: true, message: "OTP verified successfully" });
 };
 
 export const checkDuplicate = async (req, res) => {

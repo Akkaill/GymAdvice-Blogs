@@ -41,7 +41,7 @@ export const strictLoginLimiter = rateLimit({
 
 router.post("/pre-register", preRegister);
 router.post("/verify-register", verifyRegister);
-router.post("/login", strictLoginLimiter, login);
+router.post("/login", authLimiter, login);
 router.post("/logout", logout);
 router.post("/refresh-token", authLimiter, refreshToken);
 router.post("/resend-otp", otpRateLimit, resendOTP);
@@ -49,7 +49,7 @@ router.post("/resend-temp-otp", resendTempOTP);
 router.post("/verify-otp", verifyOTP);
 router.post("/check-duplicate", checkDuplicate);
 
-router.get("/me", protect, authLimiter, getMe);
+router.get("/me", protect, protect, getMe);
 
 //Admin or General User
 router.put("/:id/password", protect, isSelfOrAdmin, updateUserPassword);

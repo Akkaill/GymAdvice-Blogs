@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import rateLimit from "express-rate-limit";
 import Comment from "../models/comment.model.js";
+import Blog from "../models/blogs.model.js"
 
 export const isCommentOwner = async (req, res, next) => {
   try {
@@ -80,7 +81,26 @@ export const isSelfOrAdmin = (req, res, next) => {
 };
 
 export const isBlogOwner = async (req, res, next) => {
-  next();
+  try {
+    const blogId = req.params.id || req.params.blogId;
+    if (!blogId) return res.status(400).json({ message: "Blog id required" });
+
+    const blog = await Blog.findById(blogId).select("author authorName");
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+    const authorId = (blog.author?._id || blog.author || blog.authorName?._id || blog.authorName)?.toString();
+    const userId = req.user?._id?.toString();
+
+    // superadmin/admin ผ่านได้
+    if (["admin", "superadmin"].includes(req.user?.role)) return next();
+
+    if (!authorId || !userId || authorId !== userId) {
+      return res.status(403).json({ message: "Not authorized: blog owner only" });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
 
 export const otpRateLimit = rateLimit({
