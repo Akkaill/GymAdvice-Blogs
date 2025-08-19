@@ -57,46 +57,71 @@ export default function EditBlogModal({ isOpen, onClose, blog }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" isCentered>
       <ModalOverlay />
-      <ModalContent rounded="2xl" border="1px solid #EFEAFD" shadow="lg">
-        <Box
-          px={6}
-          py={4}
-          bgGradient="linear(to-r, #7C3AED, #F43F5E)"
-          color="white"
-          roundedTop="2xl"
-        >
-          <ModalHeader p={0}>Edit Blog</ModalHeader>
+      <ModalContent
+        rounded="2xl"
+        shadow="2xl"
+        border="1px solid"
+        borderColor="gray.100"
+      >
+        <Box px={6} py={4} borderBottom="1px solid" borderColor="gray.200">
+          <ModalHeader fontSize="xl" fontWeight="bold" color="gray.800" p={0}>
+            Edit Blog
+          </ModalHeader>
         </Box>
-        <ModalCloseButton color="white" top="14px" />
+        <ModalCloseButton top="12px" />
 
         <ModalBody pb={6} px={6} pt={5} bg="white">
           <VStack spacing={4} align="stretch">
             <FormControl>
               <FormLabel>Title</FormLabel>
-              <Input name="title" value={form.title} onChange={handleChange} borderColor="#EFEAFD" />
+              <Input
+                name="title"
+                value={form.title}
+                onChange={handleChange}
+                borderColor="gray.200"
+                _hover={{ borderColor: "gray.400" }}
+              />
             </FormControl>
             <FormControl>
               <FormLabel>Subtitle</FormLabel>
-              <Input name="subtitle" value={form.subtitle} onChange={handleChange} borderColor="#EFEAFD" />
+              <Input
+                name="subtitle"
+                value={form.subtitle}
+                onChange={handleChange}
+                borderColor="gray.200"
+                _hover={{ borderColor: "gray.400" }}
+              />
             </FormControl>
             <FormControl>
               <FormLabel>Image URL</FormLabel>
-              <Input name="image" value={form.image} onChange={handleChange} borderColor="#EFEAFD" />
+              <Input
+                name="image"
+                value={form.image}
+                onChange={handleChange}
+                borderColor="gray.200"
+                _hover={{ borderColor: "gray.400" }}
+              />
             </FormControl>
             <FormControl>
               <FormLabel>Description</FormLabel>
-              <Textarea name="description" value={form.description} onChange={handleChange} borderColor="#EFEAFD" />
+              <Textarea
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                borderColor="gray.200"
+                _hover={{ borderColor: "gray.400" }}
+              />
             </FormControl>
 
             <Divider />
 
             <Button
               onClick={handleSubmit}
-              bgGradient="linear(to-r, #7C3AED, #F43F5E)"
+              bg="blue.600"
               color="white"
-              _hover={{ opacity: 0.9 }}
+              _hover={{ bg: "blue.700" }}
               w="full"
               height="44px"
               rounded="xl"

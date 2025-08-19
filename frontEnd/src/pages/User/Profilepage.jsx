@@ -1,7 +1,7 @@
-// src/pages/ProfilePage.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { useProfileStore } from "@/store/profileStore";
 import { Link as RouterLink, useParams } from "react-router-dom";
+import { useBlogStore } from "@/store/blog";
 import EditBlogModal from "@/components/form/EditBlogModal";
 import {
   Box,
@@ -12,7 +12,6 @@ import {
   VStack,
   HStack,
   Heading,
-  Spinner,
   useToast,
   IconButton,
   Divider,
@@ -24,6 +23,12 @@ import {
   SkeletonText,
   Link as ChakraLink,
   useDisclosure,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
 } from "@chakra-ui/react";
 import {
   EditIcon,
@@ -40,7 +45,7 @@ export function ProfilePage() {
   const toast = useToast();
   const fileInputRef = useRef(null);
   const { id } = useParams();
-
+  const { deleteBlog } = useBlogStore();
   const {
     user,
     blogs = [],
@@ -56,6 +61,15 @@ export function ProfilePage() {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedBlog, setSelectedBlog] = useState(null);
+
+  const [deleteId, setDeleteId] = useState(null);
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
+  const cancelRef = useRef();
+
   const [username, setUsername] = useState("");
   const [instagram, setInstagram] = useState("");
   const [editingUsername, setEditingUsername] = useState(false);
@@ -93,16 +107,35 @@ export function ProfilePage() {
     onOpen();
   };
 
-  const handleDeleteBlog = async (blogId) => {
-    const ok = window.confirm("Delete this blog?");
-    if (!ok) return;
-    const success = await useProfileStore.getState().deleteBlog(blogId);
-    toast({
-      title: success ? "Deleted" : "Error",
-      status: success ? "success" : "error",
-      duration: 3000,
-      isClosable: true,
-    });
+  const handleDeleteBlog = (blogId) => {
+    setDeleteId(blogId);
+    onDeleteOpen();
+  };
+  const confirmDeleteBlog = async () => {
+    try {
+      const success = await deleteBlog(deleteId);
+      toast({
+        title: success ? "Deleted" : "Error",
+        status: success ? "success" : "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      if (id) {
+        await fetchProfileById(id);
+      } else {
+        await fetchProfile();
+      }
+    } catch (err) {
+      toast({
+        title: "An error occurred",
+        description: err?.response?.data?.message || "Unable to delete",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+
+    onDeleteClose();
   };
 
   const handleUpdateInfo = async () => {
@@ -504,7 +537,6 @@ export function ProfilePage() {
                     )}
                   </HStack>
 
-    
                   {b.createdAt && (
                     <Text mt={3} fontSize="xs" color={subtitleColor}>
                       {new Date(b.createdAt).toLocaleString()}
@@ -516,8 +548,34 @@ export function ProfilePage() {
           )}
         </Box>
       </Box>
+      {/* Confirm Delete Modal */}
+      <AlertDialog
+        isOpen={isDeleteOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onDeleteClose}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent rounded="xl" shadow="2xl">
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Confirm Blog Deletion
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Are you sure you want to delete this blog? This action cannot be
+              undone.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onDeleteClose}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={confirmDeleteBlog} ml={3}>
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
 
-      {/* Edit Blog Modal */}
       <EditBlogModal isOpen={isOpen} onClose={onClose} blog={selectedBlog} />
     </Box>
   );

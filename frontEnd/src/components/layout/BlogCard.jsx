@@ -151,7 +151,7 @@ function BlogCardBase({ blog, showDelete = false, onDelete }) {
                 }}
                 loading="lazy"
                 decoding="async"
-                fetchpriority="low"
+                fetchPriority="low"
                 referrerPolicy="no-referrer"
               />
             ) : (
