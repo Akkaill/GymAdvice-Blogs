@@ -125,25 +125,35 @@ export const createBlog = async (req, res) => {
   }
 };
 
-export const updateBlog = async (req, res) => {
-  const blogId = req.params.id;
-  const updates = req.body;
+export const updateBlog = async (req, res, next) => {
+  try {
+    const blogId = req.params.id;
+    const updates = req.body;
 
-  const blog = await Blog.findById(blogId);
-  if (!blog)
-    return res.status(404).json({ success: false, message: "Blog not found" });
+    const blog = await Blog.findById(blogId);
+    if (!blog)
+      return res
+        .status(404)
+        .json({ success: false, message: "Blog not found" });
 
-  if (
-    !blog.user.equals(req.user._id) &&
-    !["admin", "superadmin"].includes(req.user.role)
-  ) {
-    return res.status(403).json({ success: false, message: "Unauthorized" });
+    if (
+      !blog.user.equals(req.user._id) &&
+      !["admin", "superadmin"].includes(req.user.role)
+    ) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    Object.assign(blog, updates);
+    await blog.save();
+
+    res.json({ success: true, data: blog });
+  } catch (err) {
+    if (next) {
+      next(err);
+    } else {
+      res.status(500).json({ success: false, message: "Server error" });
+    }
   }
-
-  Object.assign(blog, updates);
-  await blog.save();
-
-  res.json({ success: true, data: blog });
 };
 
 export const deleteBlog = async (req, res) => {
