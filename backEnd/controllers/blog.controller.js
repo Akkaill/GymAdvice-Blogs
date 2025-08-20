@@ -1,6 +1,7 @@
 import Blog from "../models/blogs.model.js";
 import mongoose from "mongoose";
 import { createNotification } from "../utils/notification.js";
+import logger from "../config/logger.js";
 
 export const getBlogs = async (req, res) => {
   try {
@@ -58,7 +59,7 @@ export const getBlogs = async (req, res) => {
       hasMore,
     });
   } catch (error) {
-    console.error("Error in getBlogs:", error);
+    logger.error("Error in getBlogs", error);
     res.status(500).json({
       success: false,
       message: "Server error",
@@ -85,7 +86,7 @@ export const getBlogById = async (req, res) => {
     }
     res.status(200).json({ success: true, data: blog });
   } catch (error) {
-    console.error("Error in getBlogById:", error);
+    logger.error("Error in getBlogById", error);
     res.status(500).json({ success: false, message: "Failure to FetchById" });
   }
 };
@@ -118,7 +119,7 @@ export const createBlog = async (req, res) => {
       .status(201)
       .json({ success: true, message: "Blog created", data: newBlog });
   } catch (error) {
-    console.error("Error in Create blog", error.message);
+    logger.error("Error in createBlog", { message: error.message });
     res
       .status(500)
       .json({ success: false, message: "Server error: Failed to create blog" });
@@ -177,7 +178,7 @@ export const deleteBlog = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error to Delete" });
   }
-  console.log("deleted", id);
+  logger.info("Deleted blog", { id });
 };
 
 export const toggleFavorite = async (req, res) => {
@@ -270,7 +271,8 @@ export const getTopBlogs = async (req, res) => {
 
     res.json({ success: true, blogs: topBlogs });
   } catch (err) {
-    console.error("Error in getTopBlogs:", err);
+    logger.error("Error in getTopBlogs", err);
+
     res
       .status(500)
       .json({ success: false, message: "Failed to fetch top blogs" });
@@ -279,7 +281,7 @@ export const getTopBlogs = async (req, res) => {
 
 export const getFavoriteBlogs = async (req, res) => {
   try {
-    console.log("🔐 USER FROM TOKEN:", req.user);
+    logger.debug("Fetching favorite blogs for user");
     const userId = req.user._id;
 
     const blogs = await Blog.find({ favoritedBy: userId })
@@ -288,7 +290,7 @@ export const getFavoriteBlogs = async (req, res) => {
 
     res.status(200).json({ success: true, data: blogs });
   } catch (err) {
-    console.error("Error in getFavoriteBlogs:", err);
+    logger.error("Error in getFavoriteBlogs", err);
     res.status(500).json({
       success: false,
       message: "Failed to fetch favorite blogs",

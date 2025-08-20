@@ -1,5 +1,5 @@
 import Notification from "../models/notification.model.js";
-
+import logger from "../config/logger.js";
 export const createNotification = async ({ user, type, content, title }) => {
   try {
     const noti = new Notification({
@@ -10,6 +10,6 @@ export const createNotification = async ({ user, type, content, title }) => {
     });
     await noti.save();
   } catch (error) {
-    console.error("Failed to create notification:", error.message);
+    logger.error("Failed to create notification", { message: error.message });
   }
 };

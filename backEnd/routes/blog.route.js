@@ -27,5 +27,4 @@ router.post("/:id/favorite", protect, toggleFavorite);
 router.put("/:id", protect, updateBlogValidation, validate, updateBlog);
 router.delete("/:id", protect, isBlogOwner, deleteBlog);
 
-console.log(process.env.MONGO_URI);
 export default router;

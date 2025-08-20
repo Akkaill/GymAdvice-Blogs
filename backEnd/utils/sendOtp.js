@@ -1,6 +1,8 @@
 import TempOtp from "../models/tempOtp.model.js";
 import { sendEmailOTP } from "./sendEmailOTP.js";
 // import { sendSMSOTP } from "./sendSMSOTP.js";
+import logger from "../config/logger.js";
+
 export const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
@@ -21,13 +23,11 @@ export const sendOTP = async (userId, email, phone, options = {}) => {
     phone,
     otp,
     expiresAt,
-    tempData: options.extra ||{},
+    tempData: options.extra || {},
   });
 
   if (email) await sendEmailOTP(email, otp);
   // if (phone) await sendSMSOTP(phone, otp);
 
-  console.log(`Sending OTP ${otp} to ${email || phone}`);
+  logger.info(`Sending OTP  ${otp} to ${email || phone}`);
 };
-
-

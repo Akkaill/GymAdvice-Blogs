@@ -1,12 +1,11 @@
 import SecuritySettings from "../models/securitySetting.model.js";
 import { createLog } from "../utils/log.js";
-
+import logger from "../config/logger.js";
 
 export const getSecuritySettings = async (req, res) => {
   const settings = await SecuritySettings.findOne();
   res.json({ success: true, settings });
 };
-
 
 export const updateSecuritySettings = async (req, res) => {
   const { registrationEnabled, maxLoginAttempts } = req.body;
@@ -18,11 +17,17 @@ export const updateSecuritySettings = async (req, res) => {
       { new: true, upsert: true }
     );
 
-    await createLog("update_security", req.user._id, "Updated security settings");
+    await createLog(
+      "update_security",
+      req.user._id,
+      "Updated security settings"
+    );
 
     res.json({ success: true, message: "Settings updated", settings });
   } catch (err) {
-    console.error("Update Security Error:", err.message);
-    res.status(500).json({ success: false, message: "Server error updating settings" });
+    logger.error("Update Security Error", { message: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error updating settings" });
   }
 };

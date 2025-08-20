@@ -7,6 +7,7 @@ import { sendOTP } from "../utils/sendOtp.js";
 import TempOtp from "../models/tempOtp.model.js";
 import { sendEmailOTP } from "../utils/sendEmailOTP.js";
 import { sendSMSOTP } from "../utils/sendSMSOTP.js";
+import logger from "../config/logger.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const createAccessToken = (user) => {
@@ -49,7 +50,7 @@ export const getAllUsers = async (req, res) => {
 
     res.status(200).json({ success: true, data: users });
   } catch (err) {
-    console.error("Get Users Error:", err.message);
+    logger.error("Get Users Error", { message: err.message })
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -72,7 +73,7 @@ export const preRegister = async (req, res) => {
     });
   }
 
-  console.log("📤 Sending OTP with tempData:", { username, password });
+  logger.info("Sending OTP for registration");
   await sendOTP(null, email, phone, {
     extra: { username, password },
   });
@@ -86,7 +87,7 @@ export const preRegister = async (req, res) => {
 
 export const verifyRegister = async (req, res) => {
   const { otp, email, phone } = req.body;
-  console.log(">> VerifyRegister Request:", { otp, email, phone });
+  c logger.debug("VerifyRegister request received")
   const query = email ? { email } : { phone };
 
   const temp = await TempOtp.findOne(query);
@@ -104,7 +105,7 @@ export const verifyRegister = async (req, res) => {
     return res.status(400).json({ success: false, message: "OTP expired" });
   }
 
-  console.log("✅ TempOtp found:", temp);
+  logger.debug("Temporary OTP record found")
   if (!temp.tempData?.username || !temp.tempData?.password) {
     return res.status(400).json({
       success: false,
@@ -129,7 +130,7 @@ export const verifyRegister = async (req, res) => {
       userId: newUser._id,
     });
   } catch (err) {
-    console.error(" User creation failed:", err);
+     logger.error("User creation failed", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -309,15 +310,15 @@ export const logout = async (req, res) => {
     if (userId) {
       const user = await User.findById(userId);
       if (user) {
-        user.tokenVersion = (user.tokenVersion || 0) + 1; // revoke ทั้งชุด
+        user.tokenVersion = (user.tokenVersion || 0) + 1; 
         await user.save();
         await createLog("Logout", user._id, "User logged out");
       }
     } else {
-      console.warn("Logout: no user resolvable (no req.user and bad cookie)");
+        logger.warn("Logout: no user resolvable (no req.user and bad cookie)");
     }
   } catch (err) {
-    console.error("Logout Error:", err.message);
+   logger.error("Logout Error", { message: err.message });
   } finally {
     res.clearCookie("jid", {
       httpOnly: true,
@@ -361,7 +362,7 @@ export const updateUserPassword = async (req, res) => {
 
     res.json({ success: true, message: "Password updated", user });
   } catch (err) {
-    console.error("Password Update Error:", err.message);
+     logger.error("Password Update Error", { message: err.message });
     res
       .status(500)
       .json({ success: false, message: "Server error updating password" });
@@ -411,7 +412,7 @@ export const resendOTP = async (req, res) => {
 
   user.tempContactInfo.lastOtpSentAt = now;
   await user.save();
-  console.log(`[OTP] Sent OTP ${otp} to ${email || phone}`);
+   logger.info("OTP sent to user");
 
   res.json({ success: true, message: "OTP resent successfully" });
 };

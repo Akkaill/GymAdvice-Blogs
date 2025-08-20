@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import Blog from "../models/blogs.model.js";
 import cloudinary from "../utils/cloudinary.js";
 import fs from "fs";
+import logger from "../config/logger.js";
 
 export const getMyProfile = async (req, res) => {
   try {
@@ -20,7 +21,7 @@ export const getMyProfile = async (req, res) => {
       blogs,
     });
   } catch (err) {
-    console.error("Error fetching profile:", err.message);
+    logger.error("Error fetching profile", { message: err.message });
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -77,7 +78,7 @@ export const updateAvatar = async (req, res) => {
 
     res.json({ message: "Avatar updated", avatar: user.avatar });
   } catch (err) {
-    console.error("Avatar Upload Error:", err);
+    logger.error("Avatar Upload Error", err);
     res
       .status(500)
       .json({ message: "Failed to update avatar", error: err.message });

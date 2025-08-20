@@ -5,9 +5,9 @@ export const sendEmailOTP = async (to, otp) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.GMAIL_USER,        // myemail@gmail.com
-        pass: process.env.GMAIL_APP_PASSWORD // app password 16 ตัว
-      }
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
     });
 
     const mailOptions = {
@@ -25,9 +25,9 @@ export const sendEmailOTP = async (to, otp) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`[OTP] Sent email to ${to}`);
+    logger.info("OTP email sent");
   } catch (err) {
-    console.error("Gmail OTP Error:", err.message);
+    logger.error("Gmail OTP Error", { message: err.message });
     throw new Error("Failed to send OTP email");
   }
 };

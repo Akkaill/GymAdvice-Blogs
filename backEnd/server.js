@@ -11,6 +11,7 @@ import dashboardRoutes from "./routes/dashboard.route.js";
 import notificationRoutes from "./routes/notification.route.js";
 import commentRoutes from "./routes/comment.route.js";
 import profileRoutes from "./routes/profile.route.js";
+import logger from "./config/logger.js";
 
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
@@ -55,12 +56,12 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/noti", notificationRoutes);
 
 app.use((err, req, res, next) => {
-  console.log(err.stack);
+  logger.error(err.stack);
   createLog("server_Error", req.user?._id || null, err.message);
   res.status(500).json({ success: false, message: "Internal Server Error" });
 });
 
 app.listen(PORT, "::", () => {
   connectDB();
-  console.log("Sever started at http://localhost:" + PORT);
+  logger.info(`Server started at http://localhost:${PORT}`);
 });
