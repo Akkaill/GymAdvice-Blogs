@@ -13,7 +13,6 @@ import {
   useColorModeValue,
   Tooltip,
   Flex,
-  useToast,
 } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
 import { FaGithub, FaTwitter, FaLinkedin } from "react-icons/fa";
@@ -37,7 +36,6 @@ const Footer = () => {
       position="relative"
       overflow="hidden"
     >
-      {/* Decorative glow blobs */}
       <Box
         aria-hidden
         position="absolute"
@@ -48,6 +46,8 @@ const Footer = () => {
         bgGradient="linear(to-tr,gray.200,gray.500,gray.900)"
         filter="blur(40px)"
         opacity={0.25}
+        pointerEvents="none"
+        zIndex={0}
       />
       <Box
         aria-hidden
@@ -59,17 +59,19 @@ const Footer = () => {
         bgGradient="linear(to-tr,gray.200,gray.500,gray.900)"
         filter="blur(50px)"
         opacity={0.2}
+        pointerEvents="none"
+        zIndex={0}
       />
 
-      {/* Accent gradient bar */}
-
-      <Container maxW="7xl" px={{ base: 4, md: 8 }} py={{ base: 10, md: 14 }}>
-        <SimpleGrid
-          columns={{ base: 1, sm: 2, lg: 4 }}
-          spacing={{ base: 10, md: 14 }}
-        >
-          {/* Brand */}
-          <Stack spacing={4}>
+      <Container
+        maxW="7xl"
+        px={{ base: 4, md: 8 }}
+        py={{ base: 10, md: 14 }}
+        position="relative"
+        zIndex={1}
+      >
+        <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={{ base: 10, md: 14 }}>
+          <Stack spacing={4} minW={0}>
             <Flex align="center" gap={2}>
               <Box as={GiBiceps} boxSize={6} color={"blackAlpha.800"} />
               <Text
@@ -87,14 +89,15 @@ const Footer = () => {
             </Text>
           </Stack>
 
-          {/* Navigation 1 */}
-          <Stack spacing={3}>
+          <Stack spacing={3} align={{ base: "flex-start", sm: "flex-end" }}>
             <Text fontWeight="semibold" color={heading}>
               Menu
             </Text>
             <CLink
               as={RouterLink}
               to="/"
+              display="inline-flex"
+              cursor="pointer"
               _hover={{ color: accent, textDecoration: "none" }}
             >
               Home
@@ -102,6 +105,8 @@ const Footer = () => {
             <CLink
               as={RouterLink}
               to="/create"
+              display="inline-flex"
+              cursor="pointer"
               _hover={{ color: accent, textDecoration: "none" }}
             >
               Create
@@ -109,6 +114,8 @@ const Footer = () => {
             <CLink
               as={RouterLink}
               to="/blogs"
+              display="inline-flex"
+              cursor="pointer"
               _hover={{ color: accent, textDecoration: "none" }}
             >
               All Blogs

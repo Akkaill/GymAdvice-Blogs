@@ -87,7 +87,7 @@ export const preRegister = async (req, res) => {
 
 export const verifyRegister = async (req, res) => {
   const { otp, email, phone } = req.body;
-  c logger.debug("VerifyRegister request received")
+  logger.debug("VerifyRegister request received")
   const query = email ? { email } : { phone };
 
   const temp = await TempOtp.findOne(query);
