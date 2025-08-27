@@ -12,7 +12,6 @@ import notificationRoutes from "./routes/notification.route.js";
 import commentRoutes from "./routes/comment.route.js";
 import profileRoutes from "./routes/profile.route.js";
 import logger from "./config/logger.js";
-
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { createLog } from "./utils/log.js";
@@ -36,15 +35,23 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again later",
 });
 
-const origins = (process.env.CORS_ORIGIN || "")
+const raw = process.env.CORS_ORIGIN || "";
+const allowList = raw
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
-
+const allowRegex = [
+  /^https?:\/\/(www\.)?gymadviceik\.com$/i,
+  /^https?:\/\/[^/]+\.onrender\.com$/i, // ถ้า FE เคยรันบน onrender (เอาออกได้ภายหลัง)
+];
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || origins.includes(origin)) return cb(null, true);
+      if (!origin) return cb(null, true);
+      if (allowList.includes(origin)) return cb(null, true);
+      if (allowRegex.some((rx) => rx.test(origin))) return cb(null, true);
+
+      logger.warn("CORS blocked origin", { origin });
       return cb(new Error("Not allowed by CORS"), false);
     },
     credentials: true,
