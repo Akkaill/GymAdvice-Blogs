@@ -76,6 +76,7 @@ mount("/api/profile", profileRoutes);
 mount("/api/noti", notificationRoutes);
 
 app.get("/health", (_, res) => res.send("ok"));
+app.get("/", (req, res) => res.send("GymAdvice API is running"));
 
 app.use((err, req, res, next) => {
   logger.error(err.stack);
