@@ -20,40 +20,62 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 dotenv.config();
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.set("trust proxy", 1);
+
 const isProd = process.env.NODE_ENV === "production";
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 นาที
-  limit: isProd ? 120 : 1000, // dev ผ่อนให้เยอะ
+  windowMs: 15 * 60 * 1000,
+  limit: isProd ? 120 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => req.user?.id || req.ip,
   skip: (req) => !isProd,
   message: "Too many requests from this IP, please try again later",
 });
-const app = express();
-const PORT = process.env.PORT || 5000;
+
+const origins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: (origin, cb) => {
+      if (!origin || origins.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"), false);
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(helmet());
-app.use("/api/", limiter);
+app.use("/api", limiter);
 
-app.use("/api/blogs", blogRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/logs", logRoutes);
-app.use("/api/superadmin", superadminRoutes);
-app.use("/api/security", securityRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/comments", commentRoutes);
-app.use("/api/profile", profileRoutes);
-app.use("/api/noti", notificationRoutes);
+const mount = (path, router) => {
+  console.log("🔌 Mounting:", path);
+  app.use(path, router);
+  console.log("✅ Mounted:", path);
+};
+
+mount("/api/blogs", blogRoutes);
+mount("/api/admin", adminRoutes);
+mount("/api/users", userRoutes);
+mount("/api/logs", logRoutes);
+mount("/api/superadmin", superadminRoutes);
+mount("/api/security", securityRoutes);
+mount("/api/dashboard", dashboardRoutes);
+mount("/api/comments", commentRoutes);
+mount("/api/profile", profileRoutes);
+mount("/api/noti", notificationRoutes);
+
+app.get("/health", (_, res) => res.send("ok"));
 
 app.use((err, req, res, next) => {
   logger.error(err.stack);
@@ -61,7 +83,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: "Internal Server Error" });
 });
 
-app.listen(PORT, "::", () => {
-  connectDB();
-  logger.info(`Server started at http://localhost:${PORT}`);
-});
+connectDB()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      logger.info(`Server started on port ${PORT}`);
+    });
+  })
+  .catch((e) => {
+    logger.error("DB connect failed", { message: e.message });
+    process.exit(1);
+  });
