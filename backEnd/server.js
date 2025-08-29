@@ -27,36 +27,43 @@ const PORT = process.env.PORT || 5000;
 
 app.set("trust proxy", 1);
 
-
-const raw = process.env.CORS_ORIGIN || "";
-const allowList = raw.split(",").map(s => s.trim()).filter(Boolean);
+const allowList = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const allowRegex = [
   /^https?:\/\/(www\.)?gymadviceik\.com$/i,
   /^https?:\/\/[^/]+\.onrender\.com$/i,
 ];
 
-const corsOrigin = (origin, cb) => {
-  if (!origin) return cb(null, true);
-  const ok = allowList.includes(origin) || allowRegex.some(rx => rx.test(origin));
-  return cb(null, ok);              
-};
-
 const corsOptions = {
-  origin: corsOrigin,
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    const ok =
+      allowList.includes(origin) || allowRegex.some((rx) => rx.test(origin));
+    cb(null, ok);
+  },
   credentials: true,
-  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization","X-Requested-With","Cookie"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Cookie",
+  ],
   optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
-app.options("/api/:path(.*)", cors(corsOptions));
 
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 app.use(cookieParser());
 app.use(express.json());
 app.use(helmet());
-
 
 const isProd = process.env.NODE_ENV === "production";
 const limiter = rateLimit({
@@ -69,7 +76,6 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again later",
 });
 app.use("/api", limiter);
-
 
 const mount = (path, router) => {
   console.log("🔌 Mounting:", path);
@@ -88,23 +94,22 @@ mount("/api/comments", commentRoutes);
 mount("/api/profile", profileRoutes);
 mount("/api/noti", notificationRoutes);
 
-
 app.get("/health", (_, res) => res.send("ok"));
 app.get("/", (_, res) => res.send("GymAdvice API is running"));
-
 
 app.use((req, res) => {
   return res.status(404).json({ success: false, message: "Not Found" });
 });
 
-
 app.use((err, req, res, next) => {
   logger.error(err.stack);
-  try { createLog("server_Error", req.user?._id || null, err.message); } catch {}
+  try {
+    createLog("server_Error", req.user?._id || null, err.message);
+  } catch {}
   res.status(500).json({ success: false, message: "Internal Server Error" });
 });
 
-
+// Boot
 connectDB()
   .then(() => {
     app.listen(PORT, "0.0.0.0", () => {
