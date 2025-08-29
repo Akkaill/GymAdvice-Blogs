@@ -50,44 +50,53 @@ export const getAllUsers = async (req, res) => {
 
     res.status(200).json({ success: true, data: users });
   } catch (err) {
-    logger.error("Get Users Error", { message: err.message })
+    logger.error("Get Users Error", { message: err.message });
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const preRegister = async (req, res) => {
-  const { username, password, email, phone } = req.body;
+  try {
+    const { username, password, email, phone } = req.body;
 
-  if (!username || !password || (!email && !phone)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Missing required fields" });
-  }
+    if (!username || !password || (!email && !phone)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
+    }
 
-  const existingUser = await User.findOne({ email });
+    if (email) {
+      const existing = await User.findOne({ email }).lean();
+      if (existing) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Email already exists" });
+      }
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-  if (existingUser) {
-    return res.status(400).json({
-      success: false,
-      message: "Email already exists",
+    await sendOTP(null, email || null, phone || null, {
+      extra: { username, hashedPassword },
     });
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent. Please verify.",
+      contact: email || phone,
+    });
+  } catch (err) {
+    logger.error("preRegister failed", { message: err.message });
+    const msg = /not configured|Failed to send/i.test(err.message)
+      ? "OTP service unavailable"
+      : "Failed to pre-register";
+    const code = /not configured/i.test(err.message) ? 503 : 500;
+    return res.status(code).json({ success: false, message: msg });
   }
-
-  logger.info("Sending OTP for registration");
-  await sendOTP(null, email, phone, {
-    extra: { username, password },
-  });
-
-  return res.status(200).json({
-    success: true,
-    message: "OTP sent. Please verify.",
-    contact: email || phone,
-  });
 };
 
 export const verifyRegister = async (req, res) => {
   const { otp, email, phone } = req.body;
-  logger.debug("VerifyRegister request received")
+  logger.debug("VerifyRegister request received");
   const query = email ? { email } : { phone };
 
   const temp = await TempOtp.findOne(query);
@@ -105,7 +114,7 @@ export const verifyRegister = async (req, res) => {
     return res.status(400).json({ success: false, message: "OTP expired" });
   }
 
-  logger.debug("Temporary OTP record found")
+  logger.debug("Temporary OTP record found");
   if (!temp.tempData?.username || !temp.tempData?.password) {
     return res.status(400).json({
       success: false,
@@ -130,7 +139,7 @@ export const verifyRegister = async (req, res) => {
       userId: newUser._id,
     });
   } catch (err) {
-     logger.error("User creation failed", err);
+    logger.error("User creation failed", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -310,15 +319,15 @@ export const logout = async (req, res) => {
     if (userId) {
       const user = await User.findById(userId);
       if (user) {
-        user.tokenVersion = (user.tokenVersion || 0) + 1; 
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
         await user.save();
         await createLog("Logout", user._id, "User logged out");
       }
     } else {
-        logger.warn("Logout: no user resolvable (no req.user and bad cookie)");
+      logger.warn("Logout: no user resolvable (no req.user and bad cookie)");
     }
   } catch (err) {
-   logger.error("Logout Error", { message: err.message });
+    logger.error("Logout Error", { message: err.message });
   } finally {
     res.clearCookie("jid", {
       httpOnly: true,
@@ -362,7 +371,7 @@ export const updateUserPassword = async (req, res) => {
 
     res.json({ success: true, message: "Password updated", user });
   } catch (err) {
-     logger.error("Password Update Error", { message: err.message });
+    logger.error("Password Update Error", { message: err.message });
     res
       .status(500)
       .json({ success: false, message: "Server error updating password" });
@@ -412,7 +421,7 @@ export const resendOTP = async (req, res) => {
 
   user.tempContactInfo.lastOtpSentAt = now;
   await user.save();
-   logger.info("OTP sent to user");
+  logger.info("OTP sent to user");
 
   res.json({ success: true, message: "OTP resent successfully" });
 };

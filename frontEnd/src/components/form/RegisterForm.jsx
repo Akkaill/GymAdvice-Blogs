@@ -229,7 +229,7 @@ export default function RegisterForm() {
               <FormControl isInvalid={!!errors.phone}>
                 <FormLabel>Phone</FormLabel>
                 <Input
-                  type="tel"
+                  type="number"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="08x-xxx-xxxx"
