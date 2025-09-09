@@ -76,7 +76,7 @@ export const preRegister = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await sendOTP(null, email || null, phone || null, {
-      extra: { username, hashedPassword },
+      extra: { username, password: hashedPassword },
     });
 
     return res.status(200).json({
